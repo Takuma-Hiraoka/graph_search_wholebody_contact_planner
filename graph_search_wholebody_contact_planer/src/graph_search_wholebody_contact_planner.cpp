@@ -51,9 +51,10 @@ namespace graph_search_wholebody_contact_planner{
 
   void WholeBodyContactPlanner::preCheckTransition(std::shared_ptr<graph_search::Planner::TransitionCheckParam> checkParam, std::shared_ptr<graph_search::Node> extend_node) {
     std::weak_ptr<graph_search::Node> parent = extend_node->parent();
-    if (parent.expired()) std::static_pointer_cast<WholeBodyContactPlanner::ContactTransitionCheckParam>(checkParam)->preState = std::static_pointer_cast<ContactNode>(extend_node)->state(); // 初期状態なので絶対に遷移可能にしておく.
-    else std::static_pointer_cast<WholeBodyContactPlanner::ContactTransitionCheckParam>(checkParam)->preState = std::static_pointer_cast<ContactNode>(parent.lock())->state();
-    std::static_pointer_cast<WholeBodyContactPlanner::ContactTransitionCheckParam>(checkParam)->postState = std::static_pointer_cast<ContactNode>(extend_node)->state();
+    std::shared_ptr<ContactTransitionCheckParam> contactCheckParam = std::static_pointer_cast<WholeBodyContactPlanner::ContactTransitionCheckParam>(checkParam);
+    if (parent.expired()) contactCheckParam->preState = std::static_pointer_cast<ContactNode>(extend_node)->state(); // 初期状態なので絶対に遷移可能にしておく.
+    else contactCheckParam->preState = std::static_pointer_cast<ContactNode>(parent.lock())->state();
+    contactCheckParam->postState = std::static_pointer_cast<ContactNode>(extend_node)->state();
   }
 
   void WholeBodyContactPlanner::postCheckTransition(std::shared_ptr<graph_search::Planner::TransitionCheckParam> checkParam, std::shared_ptr<graph_search::Node> extend_node) {
@@ -62,15 +63,8 @@ namespace graph_search_wholebody_contact_planner{
 
   bool WholeBodyContactPlanner::checkTransition(std::shared_ptr<graph_search::Planner::TransitionCheckParam> checkParam) {
     std::shared_ptr<ContactTransitionCheckParam> contactCheckParam = std::static_pointer_cast<WholeBodyContactPlanner::ContactTransitionCheckParam>(checkParam);
-    return this->checkTransitionImpl(contactCheckParam->preState,
-                                     contactCheckParam->postState,
-                                     contactCheckParam->bodies,
-                                     contactCheckParam->variables,
-                                     contactCheckParam->constraints,
-                                     contactCheckParam->rejections,
-                                     contactCheckParam->nominals,
-                                     contactCheckParam->pikParam,
-                                     contactCheckParam->gikParam);
+    return this->checkTransitionImpl(contactCheckParam,
+                                     contactCheckParam->postState);
   }
 
   bool WholeBodyContactPlanner::isGoalSatisfied(std::shared_ptr<graph_search::Planner::TransitionCheckParam> checkParam) {
@@ -85,7 +79,7 @@ namespace graph_search_wholebody_contact_planner{
     return true;
   }
 
-  void WholeBodyContactPlanner::calcHeuristic(std::shared_ptr<graph_search::Node> node) {
+  void WholeBodyContactPlanner::calcHeuristic(std::shared_ptr<graph_search::Planner::TransitionCheckParam> checkParam, std::shared_ptr<graph_search::Node> node) {
     // goalContactStateのcontactsのうち満たしていないもの
     // TODO 追加する
     ContactState state = std::static_pointer_cast<ContactNode>(node)->state();
@@ -101,6 +95,7 @@ namespace graph_search_wholebody_contact_planner{
   }
 
   std::vector<std::shared_ptr<graph_search::Node> > WholeBodyContactPlanner::gatherAdjacentNodes(std::shared_ptr<graph_search::Planner::TransitionCheckParam> checkParam, std::shared_ptr<graph_search::Node> extend_node) {
+    std::shared_ptr<ContactTransitionCheckParam> contactCheckParam = std::static_pointer_cast<WholeBodyContactPlanner::ContactTransitionCheckParam>(checkParam);
     ContactState extend_state = std::static_pointer_cast<ContactNode>(extend_node)->state();
     if (this->debugLevel() >= 2) {
       std::cerr << "extend_state" << std::endl;
@@ -134,8 +129,8 @@ namespace graph_search_wholebody_contact_planner{
       // ルートリンク位置からaddCandidateDistanceを超える距離のstaticCandidateと接触させることはしない
       // 高速化のため. gikを使うまでもなく解けない
       cnoid::Vector3 rootPos;
-      for (int b=0; b<std::static_pointer_cast<WholeBodyContactPlanner::ContactTransitionCheckParam>(checkParam)->bodies.size(); b++) {
-        if ((std::static_pointer_cast<WholeBodyContactPlanner::ContactTransitionCheckParam>(checkParam)->bodies[b]->name() == param.contactDynamicCandidates[i]->bodyName) && std::static_pointer_cast<WholeBodyContactPlanner::ContactTransitionCheckParam>(checkParam)->bodies[b]->joint(param.contactDynamicCandidates[i]->linkName)) rootPos = std::static_pointer_cast<WholeBodyContactPlanner::ContactTransitionCheckParam>(checkParam)->bodies[b]->rootLink()->p();
+      for (int b=0; b<contactCheckParam->bodies.size(); b++) {
+        if ((contactCheckParam->bodies[b]->name() == param.contactDynamicCandidates[i]->bodyName) && contactCheckParam->bodies[b]->joint(param.contactDynamicCandidates[i]->linkName)) rootPos = contactCheckParam->bodies[b]->rootLink()->p();
       }
       for (int j=0; j<param.contactStaticCandidates.size(); j++) {
         if ((rootPos - param.contactStaticCandidates[j]->localPose.translation()).norm() > param.addCandidateDistance) continue;
@@ -165,15 +160,15 @@ namespace graph_search_wholebody_contact_planner{
       // それぞれのルートリンク位置の距離がaddCandidateDistanceを超えるcontactDynamicCandidate同士を接触させることはしない
       // 高速化のため. gikを使うまでもなく解けない
       cnoid::Vector3 rootPos1;
-      for (int b=0; b<std::static_pointer_cast<WholeBodyContactPlanner::ContactTransitionCheckParam>(checkParam)->bodies.size(); b++) {
-        if ((std::static_pointer_cast<WholeBodyContactPlanner::ContactTransitionCheckParam>(checkParam)->bodies[b]->name() == param.contactDynamicCandidates[i]->bodyName) && std::static_pointer_cast<WholeBodyContactPlanner::ContactTransitionCheckParam>(checkParam)->bodies[b]->joint(param.contactDynamicCandidates[i]->linkName)) rootPos1 = std::static_pointer_cast<WholeBodyContactPlanner::ContactTransitionCheckParam>(checkParam)->bodies[b]->rootLink()->p();
+      for (int b=0; b<contactCheckParam->bodies.size(); b++) {
+        if ((contactCheckParam->bodies[b]->name() == param.contactDynamicCandidates[i]->bodyName) && contactCheckParam->bodies[b]->joint(param.contactDynamicCandidates[i]->linkName)) rootPos1 = contactCheckParam->bodies[b]->rootLink()->p();
       }
       for (int j=i+1; j<contactDynamicCandidates.size(); j++) {
         // 同じリンク内の候補同士は接触できない
         if ((contactDynamicCandidates[i]->bodyName == contactDynamicCandidates[j]->bodyName) && (contactDynamicCandidates[i]->linkName == contactDynamicCandidates[j]->linkName)) continue;
         cnoid::Vector3 rootPos2;
-        for (int b=0; b<std::static_pointer_cast<WholeBodyContactPlanner::ContactTransitionCheckParam>(checkParam)->bodies.size(); b++) {
-          if ((std::static_pointer_cast<WholeBodyContactPlanner::ContactTransitionCheckParam>(checkParam)->bodies[b]->name() == param.contactDynamicCandidates[j]->bodyName) && std::static_pointer_cast<WholeBodyContactPlanner::ContactTransitionCheckParam>(checkParam)->bodies[b]->joint(param.contactDynamicCandidates[j]->linkName)) rootPos2 = std::static_pointer_cast<WholeBodyContactPlanner::ContactTransitionCheckParam>(checkParam)->bodies[b]->rootLink()->p();
+        for (int b=0; b<contactCheckParam->bodies.size(); b++) {
+          if ((contactCheckParam->bodies[b]->name() == param.contactDynamicCandidates[j]->bodyName) && contactCheckParam->bodies[b]->joint(param.contactDynamicCandidates[j]->linkName)) rootPos2 = std::static_pointer_cast<WholeBodyContactPlanner::ContactTransitionCheckParam>(checkParam)->bodies[b]->rootLink()->p();
         }
         if ((rootPos1 - rootPos2).norm() > param.addCandidateDistance) continue;
 
@@ -206,38 +201,31 @@ namespace graph_search_wholebody_contact_planner{
     return adjacentNodes;
   }
 
-  bool WholeBodyContactPlanner::checkTransitionImpl(const ContactState& preState,
-                                                    ContactState& postState,
-                                                    const std::vector<cnoid::BodyPtr>& bodies,
-                                                    const std::vector<cnoid::LinkPtr>& variables,
-                                                    const std::vector<std::shared_ptr<ik_constraint2::IKConstraint> >& constraints,
-                                                    const std::vector<std::shared_ptr<ik_constraint2::IKConstraint> >& rejections,
-                                                    const std::vector<std::shared_ptr<ik_constraint2::IKConstraint> >& nominals,
-                                                    const prioritized_inverse_kinematics_solver2::IKParam& pikParam,
-                                                    const global_inverse_kinematics_solver::GIKParam& gikParam
+  bool WholeBodyContactPlanner::checkTransitionImpl(std::shared_ptr<const ContactTransitionCheckParam> checkParam,
+                                                    ContactState& postState
                                                     ) {
     if (this->debugLevel() >= 2) {
       std::cerr << "[GraphSearchWholeBodyContactPlanner] checkTransition" << std::endl;
       std::cerr << "preState" << std::endl;
-      std::cerr << preState << std::endl;
+      std::cerr << checkParam->preState << std::endl;
       std::cerr << "postState" << std::endl;
       std::cerr << postState << std::endl;
     }
 
-    global_inverse_kinematics_solver::frame2Link(preState.frame, variables);
+    global_inverse_kinematics_solver::frame2Link(checkParam->preState.frame, checkParam->variables);
     postState.transition.clear();
 
-    if (postState.contacts.size() > preState.contacts.size()) {
+    if (postState.contacts.size() > checkParam->preState.contacts.size()) {
       // attach
-      if (!solveContactIK(preState, postState.contacts.back(), postState, IKState::ATTACH_PRE, bodies, variables, constraints, rejections, nominals, pikParam, gikParam)) return false;
-      if (!solveContactIK(preState, postState.contacts.back(), postState, IKState::ATTACH_FIXED, bodies, variables, constraints, rejections, nominals, pikParam, gikParam)) return false;
-    } else if (postState.contacts.size() < preState.contacts.size()) {
+      if (!solveContactIK(checkParam, postState.contacts.back(), postState, IKState::ATTACH_PRE)) return false;
+      if (!solveContactIK(checkParam, postState.contacts.back(), postState, IKState::ATTACH_FIXED)) return false;
+    } else if (postState.contacts.size() < checkParam->preState.contacts.size()) {
       // detach
       bool find_detach_contact = false;
       Contact moveContact;
-      for(int i=0;i<preState.contacts.size() && !find_detach_contact;i++) {
-        if(std::find(postState.contacts.begin(), postState.contacts.end(), preState.contacts[i]) == postState.contacts.end()) {
-          moveContact = preState.contacts[i];
+      for(int i=0;i<checkParam->preState.contacts.size() && !find_detach_contact;i++) {
+        if(std::find(postState.contacts.begin(), postState.contacts.end(), checkParam->preState.contacts[i]) == postState.contacts.end()) {
+          moveContact = checkParam->preState.contacts[i];
           find_detach_contact = true;
         }
       }
@@ -245,17 +233,17 @@ namespace graph_search_wholebody_contact_planner{
         std::cerr << "[GraphSearchWholeBodyContactPlanner] checkTransition failed!! cannot find detach contact" << std::endl;
         return false;
       }
-      if (!solveContactIK(postState, moveContact, postState, IKState::DETACH_FIXED, bodies, variables, constraints, rejections, nominals, pikParam, gikParam)) return false;
+      if (!solveContactIK(checkParam, moveContact, postState, IKState::DETACH_FIXED)) return false;
     } else {
-      if (preState == postState) {
+      if (checkParam->preState == postState) {
         // 同じ. はじめの接触.
-        postState.transition.push_back(preState.frame);
+        postState.transition.push_back(checkParam->preState.frame);
         return true;
       }
       std::cerr << "[GraphSearchWholeBodyContactPlanner] checkTransition failed!! postState.contacts.size() is same as preState.contacts.size()" << std::endl;
       return false;
     }
-    global_inverse_kinematics_solver::link2Frame(variables, postState.frame);
+    global_inverse_kinematics_solver::link2Frame(checkParam->variables, postState.frame);
     return true;
   }
 
