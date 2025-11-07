@@ -21,6 +21,11 @@ namespace graph_search_wholebody_contact_planner{
 
   std::shared_ptr<graph_search::Planner::TransitionCheckParam> WholeBodyContactPlanner::generateCheckParam() {
     std::shared_ptr<ContactTransitionCheckParam> checkParam = std::make_shared<ContactTransitionCheckParam>();
+    cloneCheckParam(checkParam);
+    return checkParam;
+  }
+
+  void WholeBodyContactPlanner::cloneCheckParam(std::shared_ptr<ContactTransitionCheckParam> checkParam) {
     std::map<cnoid::BodyPtr, cnoid::BodyPtr> modelMap;
     checkParam->bodies = std::vector<cnoid::BodyPtr>(param.bodies.size());
     for(int b=0; b<param.bodies.size(); b++){
@@ -45,8 +50,6 @@ namespace graph_search_wholebody_contact_planner{
     }
     checkParam->pikParam = param.pikParam;
     checkParam->gikParam = param.gikParam;
-
-    return checkParam;
   }
 
   void WholeBodyContactPlanner::preCheckTransition(std::shared_ptr<graph_search::Planner::TransitionCheckParam> checkParam, std::shared_ptr<graph_search::Node> extend_node) {
@@ -65,33 +68,6 @@ namespace graph_search_wholebody_contact_planner{
     std::shared_ptr<ContactTransitionCheckParam> contactCheckParam = std::static_pointer_cast<WholeBodyContactPlanner::ContactTransitionCheckParam>(checkParam);
     return this->checkTransitionImpl(contactCheckParam,
                                      contactCheckParam->postState);
-  }
-
-  bool WholeBodyContactPlanner::isGoalSatisfied(std::shared_ptr<graph_search::Planner::TransitionCheckParam> checkParam) {
-    ContactState state = std::static_pointer_cast<WholeBodyContactPlanner::ContactTransitionCheckParam>(checkParam)->postState;
-    for (int i=0;i<this->param.goalContactState->contacts.size();i++) {
-      bool satisfied = false;
-      for (int j=0;j<state.contacts.size();j++) {
-        if (this->param.goalContactState->contacts[i] == state.contacts[j]) satisfied = true;
-      }
-      if (!satisfied) return false;
-    }
-    return true;
-  }
-
-  void WholeBodyContactPlanner::calcHeuristic(std::shared_ptr<graph_search::Planner::TransitionCheckParam> checkParam, std::shared_ptr<graph_search::Node> node) {
-    // goalContactStateのcontactsのうち満たしていないもの
-    // TODO 追加する
-    ContactState state = std::static_pointer_cast<ContactNode>(node)->state();
-    int unsatisfied_num = 0;
-    for (int i=0;i<this->param.goalContactState->contacts.size();i++) {
-      bool satisfied = false;
-      for (int j=0;j<state.contacts.size();j++) {
-        if (this->param.goalContactState->contacts[i] == state.contacts[j]) satisfied = true;
-      }
-      if (!satisfied) unsatisfied_num++;
-    }
-    node->heuristic() = unsatisfied_num;
   }
 
   std::vector<std::shared_ptr<graph_search::Node> > WholeBodyContactPlanner::gatherAdjacentNodes(std::shared_ptr<graph_search::Planner::TransitionCheckParam> checkParam, std::shared_ptr<graph_search::Node> extend_node) {

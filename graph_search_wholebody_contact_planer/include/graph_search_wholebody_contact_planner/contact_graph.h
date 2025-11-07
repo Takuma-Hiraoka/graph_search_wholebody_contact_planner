@@ -28,18 +28,17 @@ namespace graph_search_wholebody_contact_planner{
     void preCheckTransition(std::shared_ptr<graph_search::Planner::TransitionCheckParam> checkParam, std::shared_ptr<graph_search::Node> extend_node) override;
     void postCheckTransition(std::shared_ptr<graph_search::Planner::TransitionCheckParam> checkParam, std::shared_ptr<graph_search::Node> extend_node) override;
     bool checkTransition(std::shared_ptr<graph_search::Planner::TransitionCheckParam> checkParam) override;
-    bool isGoalSatisfied(std::shared_ptr<graph_search::Planner::TransitionCheckParam> checkParam) override; // nodeのcontactsがgoalContactStatesのcontactsを含んでいればtrue. nameのみで座標は無視.
     std::vector<std::shared_ptr<graph_search::Node> > gatherAdjacentNodes(std::shared_ptr<graph_search::Planner::TransitionCheckParam> checkParam, std::shared_ptr<graph_search::Node> extend_node) override;
-    void calcHeuristic(std::shared_ptr<graph_search::Planner::TransitionCheckParam> checkParam, std::shared_ptr<graph_search::Node> node) override;
 
+    void cloneCheckParam(std::shared_ptr<ContactTransitionCheckParam> checkParam);
     bool checkTransitionImpl(std::shared_ptr<const ContactTransitionCheckParam> checkParam,
                              ContactState& postState
                              ); // preStateからpostStateまでの遷移が可能ならtrue. trueのとき、postStateのframeやlocalPoseを書き換える.
-    bool solveContactIK(std::shared_ptr<const ContactTransitionCheckParam> checkParam,
-                       Contact& moveContact,
-                       ContactState& postState,
-                       const IKState& ikState
-                       );
+    virtual bool solveContactIK(std::shared_ptr<const ContactTransitionCheckParam> checkParam,
+                                Contact& moveContact,
+                                ContactState& postState,
+                                const IKState& ikState
+                                ) = 0;
     bool solve();
     void goalPath(std::vector<ContactState>& path);
     class GSWCPParam {
