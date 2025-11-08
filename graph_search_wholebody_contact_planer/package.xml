@@ -16,5 +16,6 @@
   <depend>ik_constraint2_scfr</depend>
   <depend>ik_constraint2_distance_field</depend>
   <depend>ik_constraint2_bullet</depend>
+  <depend>ik_constraint2_body_contact</depend>
 
 </package>
