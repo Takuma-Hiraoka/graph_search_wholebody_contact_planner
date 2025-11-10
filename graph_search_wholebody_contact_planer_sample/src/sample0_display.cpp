@@ -1,5 +1,7 @@
 #include <choreonoid_viewer/choreonoid_viewer.h>
 
+#include <graph_search_wholebody_contact_planner/locomotion_planner.h>
+#include <choreonoid_contact_candidate_generator/choreonoid_contact_candidate_generator.h>
 #include "jaxon_common.h"
 #include "world_common.h"
 
@@ -52,38 +54,113 @@ namespace graph_search_wholebody_contact_planner_sample{
 
     // setup viewer
     std::shared_ptr<choreonoid_viewer::Viewer> viewer = std::make_shared<choreonoid_viewer::Viewer>();
-    for(std::set<cnoid::BodyPtr>::iterator it=param->bodies.begin(); it != param->bodies.end(); it++) viewer->objects((*it));
+    for(int b=0; b<param->bodies.size(); b++) viewer->objects(param->bodies[b]);
     viewer->drawObjects();
 
-    std::vector<std::pair<std::vector<double>, std::vector<std::shared_ptr<cwcp::Contact> > > > path;
-    if(cwcp::solveCWCP(param, path)) {
-      std::cerr << "solved!" << std::endl;
-      while (true) {
-        for(int i=0;i<path.size();i++){
-          global_inverse_kinematics_solver::frame2Link(path.at(i).first,param->variables);
-          for(std::set<cnoid::BodyPtr>::iterator it=param->bodies.begin(); it != param->bodies.end(); it++) {
-            (*it)->calcForwardKinematics(false);
-            (*it)->calcCenterOfMass();
-          }
-          std::vector<cnoid::SgNodePtr> markers;
-          for (int j=0;j<path.at(i).second.size();j++) {
-            cnoid::SgLineSetPtr lines_ = new cnoid::SgLineSet;
-            lines_->setLineWidth(8.0);
-            lines_->getOrCreateColors()->resize(1);
-            lines_->getOrCreateColors()->at(0) = cnoid::Vector3f(0.9,0.9,0.0);
-            lines_->getOrCreateVertices()->resize(2);
-            lines_->colorIndices().resize(0);
-            lines_->addLine(0,1); lines_->colorIndices().push_back(0); lines_->colorIndices().push_back(0);
-            const std::vector<cnoid::SgNodePtr>& marker = std::vector<cnoid::SgNodePtr>{lines_};
-            lines_->getOrCreateVertices()->at(0) = (path.at(i).second[j]->c1.link->T() * path.at(i).second[j]->c1.localPose.translation()).cast<cnoid::Vector3f::Scalar>();
-            lines_->getOrCreateVertices()->at(1) = (path.at(i).second[j]->c2.localPose.translation()).cast<cnoid::Vector3f::Scalar>();
-            std::copy(marker.begin(), marker.end(), std::back_inserter(markers));
-          }
-          viewer->drawOn(markers);
-          viewer->drawObjects();
-          std::this_thread::sleep_for(std::chrono::milliseconds(200));
+    std::vector<std::pair<std::vector<double>, std::vector<std::shared_ptr<cwcp::Contact> > > > cwcpPath;
+    if(!cwcp::solveCWCP(param, cwcpPath)) std::cerr << "solveCWCP failed" << std::endl;
+
+    global_inverse_kinematics_solver::frame2Link(initialPose, param->variables);
+
+    graph_search_wholebody_contact_planner::WholeBodyLocomotionContactPlanner planner;
+    graph_search_wholebody_contact_planner::convertCWCPParam(*param, planner);
+    global_inverse_kinematics_solver::link2Frame(planner.variables, planner.currentContactState->frame);
+    // planner.rejections
+    std::vector<choreonoid_contact_candidate_generator::ContactCandidate> csc_;
+    choreonoid_contact_candidate_generator::generateCC(obstacle, csc_, 0.2);
+    for (int i=0; i<csc_.size(); i++) {
+      std::shared_ptr<graph_search_wholebody_contact_planner::ContactCandidate> cc = std::make_shared<graph_search_wholebody_contact_planner::ContactCandidate>();
+      cc->bodyName = csc_[i].body_name;
+      cc->linkName = csc_[i].link_name;
+      cc->localPose.translation() = csc_[i].p.cast<double>();
+      cc->localPose.linear() = csc_[i].R.cast<double>();
+      cc->isStatic = true;
+      planner.contactStaticCandidates.push_back(cc);
+    }
+
+    std::vector<choreonoid_contact_candidate_generator::ContactCandidate> cdc_;
+    choreonoid_contact_candidate_generator::generateCC(robot->link("LARM_JOINT7"), cdc_, 0.1);
+    choreonoid_contact_candidate_generator::generateCC(robot->link("RARM_JOINT7"), cdc_, 0.1);
+    choreonoid_contact_candidate_generator::generateCC(robot->link("LLEG_JOINT5"), cdc_, 0.1);
+    choreonoid_contact_candidate_generator::generateCC(robot->link("RLEG_JOINT5"), cdc_, 0.1);
+    for (int i=0; i<cdc_.size(); i++) {
+      std::shared_ptr<graph_search_wholebody_contact_planner::ContactCandidate> cc = std::make_shared<graph_search_wholebody_contact_planner::ContactCandidate>();
+      cc->bodyName = cdc_[i].body_name;
+      cc->linkName = cdc_[i].link_name;
+      cc->localPose.translation() = cdc_[i].p.cast<double>();
+      cc->localPose.linear() = cdc_[i].R.cast<double>();
+      cc->isStatic = true;
+      planner.contactDynamicCandidates.push_back(cc);
+    }
+
+    planner.pikParam.debugLevel = 3;
+    planner.pikParam.viewMilliseconds = -1;
+    planner.pikParam.viewer = viewer;
+    // planner.gikParam
+    planner.viewer = viewer;
+    planner.addCandidateDistance = 2.0;
+    planner.bodyContactConstraints.push_back(generateBodyContactConstraint(planner.bodies, robot->link("LARM_JOINT7"), 0.02));
+    planner.bodyContactConstraints.push_back(generateBodyContactConstraint(planner.bodies, robot->link("RARM_JOINT7"), 0.02));
+    planner.bodyContactConstraints.push_back(generateBodyContactConstraint(planner.bodies, robot->link("LLEG_JOINT5"), 0.02));
+    planner.bodyContactConstraints.push_back(generateBodyContactConstraint(planner.bodies, robot->link("LLEG_JOINT5"), 0.02));
+
+    for (int i=0;i<cwcpPath.size();i++) {
+      planner.guidePath.push_back(cwcpPath.at(i).first);
+    }
+
+    planner.currentContactState->transition.push_back(planner.currentContactState->frame);
+    planner.threads() = 1;
+    planner.debugLevel() = 1;
+    planner.solve();
+
+    std::vector<graph_search_wholebody_contact_planner::ContactState> gsPath;
+    planner.goalPath(gsPath);
+
+    while (true) {
+      for(int i=0;i<cwcpPath.size();i++){
+        global_inverse_kinematics_solver::frame2Link(cwcpPath.at(i).first,param->variables);
+        for(int b=0; b<param->bodies.size(); b++) {
+          param->bodies[b]->calcForwardKinematics(false);
+          param->bodies[b]->calcCenterOfMass();
         }
+        std::vector<cnoid::SgNodePtr> markers;
+        for (int j=0;j<cwcpPath.at(i).second.size();j++) {
+          cnoid::SgLineSetPtr lines_ = new cnoid::SgLineSet;
+          lines_->setLineWidth(8.0);
+          lines_->getOrCreateColors()->resize(1);
+          lines_->getOrCreateColors()->at(0) = cnoid::Vector3f(0.9,0.9,0.0);
+          lines_->getOrCreateVertices()->resize(2);
+          lines_->colorIndices().resize(0);
+          lines_->addLine(0,1); lines_->colorIndices().push_back(0); lines_->colorIndices().push_back(0);
+          const std::vector<cnoid::SgNodePtr>& marker = std::vector<cnoid::SgNodePtr>{lines_};
+          lines_->getOrCreateVertices()->at(0) = (cwcpPath.at(i).second[j]->c1.link->T() * cwcpPath.at(i).second[j]->c1.localPose.translation()).cast<cnoid::Vector3f::Scalar>();
+          lines_->getOrCreateVertices()->at(1) = (cwcpPath.at(i).second[j]->c2.localPose.translation()).cast<cnoid::Vector3f::Scalar>();
+          std::copy(marker.begin(), marker.end(), std::back_inserter(markers));
+        }
+        viewer->drawOn(markers);
+        viewer->drawObjects();
+        std::this_thread::sleep_for(std::chrono::milliseconds(200));
       }
+
+      for(int i=0;i<gsPath.size();i++){
+        for (int j=0;j<gsPath[i].transition.size();j++) {
+          global_inverse_kinematics_solver::frame2Link(gsPath[i].transition[j], planner.variables);
+          for(int b=0; b<param->bodies.size(); b++) {
+            param->bodies[b]->calcForwardKinematics(false);
+            param->bodies[b]->calcCenterOfMass();
+          }
+          viewer->drawObjects();
+          std::this_thread::sleep_for(std::chrono::milliseconds(1000 / gsPath[i].transition.size()));
+        }
+        global_inverse_kinematics_solver::frame2Link(gsPath[i].frame, planner.variables);
+        for(int b=0; b<param->bodies.size(); b++) {
+          param->bodies[b]->calcForwardKinematics(false);
+          param->bodies[b]->calcCenterOfMass();
+        }
+        viewer->drawObjects();
+        std::this_thread::sleep_for(std::chrono::milliseconds(1000));
+      }
+
     }
   }
 }

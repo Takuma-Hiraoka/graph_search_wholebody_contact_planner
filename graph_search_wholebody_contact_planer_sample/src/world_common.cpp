@@ -72,6 +72,6 @@ namespace graph_search_wholebody_contact_planner_sample{
       }
       param->field->addPointsToField(vertices);
     }
-    param->bodies.insert(obstacle);
+    param->bodies.push_back(obstacle);
   }
 }

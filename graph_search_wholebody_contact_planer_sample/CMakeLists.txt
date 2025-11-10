@@ -11,6 +11,7 @@ find_package(catkin REQUIRED COMPONENTS
   choreonoid_bullet
   choreonoid_cddlib
   ik_constraint2_bullet
+  choreonoid_contact_candidate_generator
   roslib
   )
 

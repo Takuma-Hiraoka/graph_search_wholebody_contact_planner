@@ -2,6 +2,7 @@
 
 #include <graph_search_wholebody_contact_planner/contact_graph.h>
 #include <ik_constraint2_body_contact/BodyContactConstraint.h>
+#include <c-wcp/c-wcp.h>
 
 namespace graph_search_wholebody_contact_planner{
   class WholeBodyLocomotionContactPlanner : public WholeBodyContactPlanner { // リンクごとに接触を扱う一方で、接触点不動のためstateには接触ローカル座標を残す必要がある. このためstateはIKの誤差によって毎回違うものになり、graphではなくtree searchを行う.
@@ -25,4 +26,5 @@ namespace graph_search_wholebody_contact_planner{
                        const IKState& ikState
                        ) override;
   };
+  void convertCWCPParam(const cwcp::CWCPParam& param, WholeBodyLocomotionContactPlanner& planner);
 }

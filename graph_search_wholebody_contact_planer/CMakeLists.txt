@@ -12,6 +12,7 @@ find_package(catkin REQUIRED COMPONENTS
   ik_constraint2_distance_field
   ik_constraint2_bullet
   ik_constraint2_body_contact
+  c-wcp
   )
 
 find_package(choreonoid REQUIRED)
@@ -19,7 +20,7 @@ find_package(choreonoid REQUIRED)
 catkin_package(
   INCLUDE_DIRS include
   LIBRARIES ${PROJECT_NAME}
-  CATKIN_DEPENDS graph_search prioritized_inverse_kinematics_solver2 global_inverse_kinematics_solver ik_constraint2_scfr ik_constraint2_distance_field ik_constraint2_bullet ik_constraint2_body_contact
+  CATKIN_DEPENDS graph_search prioritized_inverse_kinematics_solver2 global_inverse_kinematics_solver ik_constraint2_scfr ik_constraint2_distance_field ik_constraint2_bullet ik_constraint2_body_contact c-wcp
 )
 
 include_directories(

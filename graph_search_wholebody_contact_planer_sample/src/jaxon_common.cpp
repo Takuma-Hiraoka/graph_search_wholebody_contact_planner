@@ -7,6 +7,7 @@
 #include <choreonoid_cddlib/choreonoid_cddlib.h>
 #include <ik_constraint2_bullet/ik_constraint2_bullet.h>
 #include <ik_constraint2_distance_field/ik_constraint2_distance_field.h>
+#include <ik_constraint2_body_contact/BodyContactConstraint.h>
 
 namespace graph_search_wholebody_contact_planner_sample{
   void generateJAXON(cnoid::BodyPtr& robot, std::shared_ptr<cwcp::CWCPParam>& param) {
@@ -14,7 +15,7 @@ namespace graph_search_wholebody_contact_planner_sample{
     robot = bodyLoader.load(ros::package::getPath("jvrc_models") + "/JAXON_JVRC/JAXON_JVRCmain.wrl");
     robot->setName("JAXON");
     if(!robot) std::cerr << "!robot" << std::endl;
-    param->bodies.insert(robot);
+    param->bodies.push_back(robot);
     std::vector<std::string> contactableLinkNames{
     "LARM_JOINT7",
     "RARM_JOINT7",
@@ -94,22 +95,16 @@ namespace graph_search_wholebody_contact_planner_sample{
       constraint->joint() = robot->joint(i);
       param->constraints.push_back(constraint);
     }
-    // joint displacement
-    for(int i=0;i<robot->numJoints();i++){
-      std::shared_ptr<ik_constraint2::JointDisplacementConstraint> constraint = std::make_shared<ik_constraint2::JointDisplacementConstraint>();
-      constraint->joint() = robot->joint(i);
-      param->constraints.push_back(constraint);
-    }
 
     std::unordered_map<cnoid::LinkPtr, std::shared_ptr<btConvexShape> > collisionModels;
     for(int i=0;i<robot->numLinks();i++){
       collisionModels[robot->link(i)] = choreonoid_bullet::convertToBulletModel(robot->link(i)->collisionShape());
     }
-    for(std::set<cnoid::BodyPtr>::iterator it=param->bodies.begin(); it != param->bodies.end(); it++) {
-      if ((*it) == robot) continue;
-      for(int i=0;i<(*it)->numLinks();i++){
-        if ((*it)->link(i)->name() == "floor") continue; // floorはdistance fieldを、rWall, lWallはbulletを使う
-        collisionModels[(*it)->link(i)] = choreonoid_bullet::convertToBulletModel((*it)->link(i)->collisionShape());
+    for(int b=0; b<param->bodies.size(); b++) {
+      if (param->bodies[b] == robot) continue;
+      for(int i=0;i<param->bodies[b]->numLinks();i++){
+        if (param->bodies[b]->link(i)->name() == "floor") continue; // floorはdistance fieldを、rWall, lWallはbulletを使う
+        collisionModels[param->bodies[b]->link(i)] = choreonoid_bullet::convertToBulletModel(param->bodies[b]->link(i)->collisionShape());
       }
     }
 
@@ -137,13 +132,13 @@ namespace graph_search_wholebody_contact_planner_sample{
         constraint->updateBounds();
         param->constraints.push_back(constraint);
       }
-      for(std::set<cnoid::BodyPtr>::iterator it=param->bodies.begin(); it != param->bodies.end(); it++) {
-        if ((*it) == robot) continue;
-        for(int j=0;j<(*it)->numLinks();j++){
-          if ((*it)->link(j)->name() == "floor") continue; // floorはdistance fieldを、rWall, lWallはbulletを使う
+      for(int b=0; b<param->bodies.size(); b++) {
+        if (param->bodies[b] == robot) continue;
+        for(int j=0;j<param->bodies[b]->numLinks();j++){
+          if (param->bodies[b]->link(j)->name() == "floor") continue; // floorはdistance fieldを、rWall, lWallはbulletを使う
           std::shared_ptr<ik_constraint2_bullet::BulletCollisionConstraint> constraint = std::make_shared<ik_constraint2_bullet::BulletCollisionConstraint>();
           constraint->A_link() = robot->link(i);
-          constraint->B_link() = (*it)->link(j);
+          constraint->B_link() = param->bodies[b]->link(j);
           constraint->A_link_bulletModel() = constraint->A_link();
           constraint->A_bulletModel().push_back(collisionModels[constraint->A_link()]);
           constraint->B_link_bulletModel() = constraint->B_link();
@@ -190,13 +185,13 @@ namespace graph_search_wholebody_contact_planner_sample{
       sdfConstraint->invert() = true;
       constraint->A_link() = sdfConstraint->A_link();
       constraint->collisionConstraints().push_back(sdfConstraint);
-      for(std::set<cnoid::BodyPtr>::iterator it=param->bodies.begin(); it != param->bodies.end(); it++) {
-        if ((*it) == robot) continue;
-        for(int j=0;j<(*it)->numLinks();j++){
-          if ((*it)->link(j)->name() == "floor") continue; // floorはdistance fieldを、rWall, lWallはbulletを使う
+      for(int b=0; b<param->bodies.size(); b++) {
+        if (param->bodies[b] == robot) continue;
+        for(int j=0;j<param->bodies[b]->numLinks();j++){
+          if (param->bodies[b]->link(j)->name() == "floor") continue; // floorはdistance fieldを、rWall, lWallはbulletを使う
           std::shared_ptr<ik_constraint2_bullet::BulletCollisionConstraint> bulletConstraint = std::make_shared<ik_constraint2_bullet::BulletCollisionConstraint>();
           bulletConstraint->A_link() = robot->link(contactableLinkNames[i]);
-          bulletConstraint->B_link() = (*it)->link(j);
+          bulletConstraint->B_link() = param->bodies[b]->link(j);
           bulletConstraint->A_link_bulletModel() = bulletConstraint->A_link();
           bulletConstraint->A_bulletModel().push_back(collisionModels[bulletConstraint->A_link()]);
           bulletConstraint->B_link_bulletModel() = bulletConstraint->B_link();
@@ -212,4 +207,38 @@ namespace graph_search_wholebody_contact_planner_sample{
     }
 
   }
+
+  std::shared_ptr<ik_constraint2::IKConstraint> generateBodyContactConstraint(std::vector<cnoid::BodyPtr>& bodies, cnoid::LinkPtr link, double resolution) {
+    cnoid::LinkPtr variable = new cnoid::Link();
+    cnoid::BodyPtr body = new cnoid::Body();
+    body->setRootLink(variable);
+    bodies.push_back(body);
+    variable->setJointType(cnoid::Link::JointType::FreeJoint);
+    std::shared_ptr<ik_constraint2_body_contact::BodyContactConstraint> constraint = std::make_shared<ik_constraint2_body_contact::BodyContactConstraint>();
+    constraint->A_link() = link;
+    constraint->B_link() = nullptr;
+    constraint->A_contact_pos_link() = variable;
+    constraint->A_contact_pos_link()->T() = constraint->A_localpos();
+    constraint->A_contact_pos_body() = body;
+    std::vector<choreonoid_contact_candidate_generator::ContactCandidate> cdc_;
+    choreonoid_contact_candidate_generator::generateCC(link, cdc_, resolution);
+    std::vector<cnoid::Isometry3> contactPoints;
+    for (int i=0; i<cdc_.size(); i++) {
+      cnoid::Isometry3 pose;
+      pose.translation() = cdc_[i].p.cast<double>();
+      pose.linear() = cdc_[i].R.cast<double>();
+      contactPoints.push_back(pose);
+    }
+    constraint->A_setContactPoints(contactPoints, resolution*4, 0.4 / resolution);
+    constraint->contactSearchLimit() = resolution*3/5; // 大きすぎると振動してしまうので注意. 分解能と同じ
+    constraint->precision() = 0.02;
+    constraint->contactWeight() = 1;
+    constraint->normalGradientDistance() = 0.03;
+    constraint->contactWeight() = 1.0;
+    constraint->weight() << 1.0, 1.0, 1.0, 0.0, 0.0, 0.0; // rollやpitchを正確にすると、足裏の端で接触点探索の結果足の甲にいったときに、ほぼ最短接触点であるために接触点は変化せず、無理につま先立ちしようとしてIKがとけない、ということになる.
+    constraint->debugLevel() = 0;
+    constraint->updateBounds();
+    return constraint;
+  }
+
 }

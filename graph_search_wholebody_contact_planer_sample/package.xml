@@ -18,5 +18,6 @@
   <depend>choreonoid_bullet</depend>
   <depend>choreonoid_cddlib</depend>
   <depend>ik_constraint2_bullet</depend>
+  <depend>choreonoid_contact_candidate_generator</depend>
 
 </package>
