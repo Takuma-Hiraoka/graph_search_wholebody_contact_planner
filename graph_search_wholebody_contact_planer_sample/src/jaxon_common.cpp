@@ -179,7 +179,7 @@ namespace graph_search_wholebody_contact_planner_sample{
       std::shared_ptr<ik_constraint2_distance_field::DistanceFieldCollisionConstraint> sdfConstraint = std::make_shared<ik_constraint2_distance_field::DistanceFieldCollisionConstraint>();
       sdfConstraint->A_link() = robot->link(contactableLinkNames[i]);
       sdfConstraint->field() = param->field;
-      sdfConstraint->tolerance() = 0.3;
+      sdfConstraint->tolerance() = 0.2;
       //          constraint->precision() = 0.01;
       sdfConstraint->ignoreDistance() = 0.5;
       sdfConstraint->invert() = true;
@@ -196,7 +196,7 @@ namespace graph_search_wholebody_contact_planner_sample{
           bulletConstraint->A_bulletModel().push_back(collisionModels[bulletConstraint->A_link()]);
           bulletConstraint->B_link_bulletModel() = bulletConstraint->B_link();
           bulletConstraint->B_bulletModel().push_back(collisionModels[bulletConstraint->B_link()]);
-          bulletConstraint->tolerance() = 0.3;
+          bulletConstraint->tolerance() = 0.2;
           bulletConstraint->ignoreDistance() = 0.5;
           bulletConstraint->invert() = true;
           constraint->collisionConstraints().push_back(bulletConstraint);
@@ -211,6 +211,7 @@ namespace graph_search_wholebody_contact_planner_sample{
   std::shared_ptr<ik_constraint2::IKConstraint> generateBodyContactConstraint(std::vector<cnoid::BodyPtr>& bodies, cnoid::LinkPtr link, double resolution) {
     cnoid::LinkPtr variable = new cnoid::Link();
     cnoid::BodyPtr body = new cnoid::Body();
+    body->setName(link->name() + "_body_contact_explore");
     body->setRootLink(variable);
     bodies.push_back(body);
     variable->setJointType(cnoid::Link::JointType::FreeJoint);

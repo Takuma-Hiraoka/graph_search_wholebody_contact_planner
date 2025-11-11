@@ -62,6 +62,7 @@ namespace graph_search_wholebody_contact_planner{
       std::vector<std::shared_ptr<ik_constraint2::IKConstraint> > nominals;
       prioritized_inverse_kinematics_solver2::IKParam pikParam;
       global_inverse_kinematics_solver::GIKParam gikParam;
+      unsigned int level=0;
     };
     virtual std::shared_ptr<graph_search::Planner::TransitionCheckParam> generateCheckParam() override;
     void preCheckTransition(std::shared_ptr<graph_search::Planner::TransitionCheckParam> checkParam, std::shared_ptr<graph_search::Node> extend_node) override;

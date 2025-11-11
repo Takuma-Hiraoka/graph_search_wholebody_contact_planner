@@ -8,7 +8,10 @@ namespace graph_search_wholebody_contact_planner{
   public:
     const ContactState& state() const {return state_;}
     ContactState& state() {return state_;}
+    const unsigned int& level() const {return level_;}
+    unsigned int& level() {return level_;}
   private:
     ContactState state_;
+    unsigned int level_ = 0;
   };
 }

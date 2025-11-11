@@ -10,7 +10,6 @@ namespace graph_search_wholebody_contact_planner{
       DETACH_FIXED, // ついている接触を離す.
       ATTACH_PRE, // 触れる直前にまで近づける.
       ATTACH_FIXED, // 離れている接触をつける.
-      ATTACH_SEARCH, // 離れている接触をつける. 接触ローカル位置を探索する
     };
   std::vector<cnoid::SgNodePtr> generateCandidateMakers(const std::vector<cnoid::BodyPtr>& bodies, const std::vector<std::shared_ptr<ContactCandidate> >& ccs);
 }

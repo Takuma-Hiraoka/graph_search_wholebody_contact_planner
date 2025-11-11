@@ -31,6 +31,7 @@ namespace graph_search_wholebody_contact_planner{
     for(int b=0; b<this->bodies.size(); b++){
       checkParam->bodies[b] = this->bodies[b]->clone();
       modelMap[this->bodies[b]] = checkParam->bodies[b];
+      if (this->pikParam.viewer) this->pikParam.viewer->objects(checkParam->bodies[b]);
     }
     checkParam->variables = std::vector<cnoid::LinkPtr>(this->variables.size());
     for(int v=0;v<this->variables.size();v++){
@@ -58,6 +59,7 @@ namespace graph_search_wholebody_contact_planner{
     if (parent.expired()) contactCheckParam->preState = std::static_pointer_cast<ContactNode>(extend_node)->state(); // 初期状態なので絶対に遷移可能にしておく.
     else contactCheckParam->preState = std::static_pointer_cast<ContactNode>(parent.lock())->state();
     contactCheckParam->postState = std::static_pointer_cast<ContactNode>(extend_node)->state();
+    contactCheckParam->level = std::static_pointer_cast<ContactNode>(extend_node)->level();
   }
 
   void WholeBodyContactPlanner::postCheckTransition(std::shared_ptr<graph_search::Planner::TransitionCheckParam> checkParam, std::shared_ptr<graph_search::Node> extend_node) {
