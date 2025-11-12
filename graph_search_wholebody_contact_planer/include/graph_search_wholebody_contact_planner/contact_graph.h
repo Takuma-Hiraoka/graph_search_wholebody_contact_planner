@@ -68,7 +68,7 @@ namespace graph_search_wholebody_contact_planner{
     void preCheckTransition(std::shared_ptr<graph_search::Planner::TransitionCheckParam> checkParam, std::shared_ptr<graph_search::Node> extend_node) override;
     void postCheckTransition(std::shared_ptr<graph_search::Planner::TransitionCheckParam> checkParam, std::shared_ptr<graph_search::Node> extend_node) override;
     bool checkTransition(std::shared_ptr<graph_search::Planner::TransitionCheckParam> checkParam) override;
-    std::vector<std::shared_ptr<graph_search::Node> > gatherAdjacentNodes(std::shared_ptr<graph_search::Planner::TransitionCheckParam> checkParam, std::shared_ptr<graph_search::Node> extend_node) override;
+    virtual std::vector<std::shared_ptr<graph_search::Node> > gatherAdjacentNodes(std::shared_ptr<graph_search::Planner::TransitionCheckParam> checkParam, std::shared_ptr<graph_search::Node> extend_node) override;
 
     virtual void cloneCheckParam(std::shared_ptr<ContactTransitionCheckParam> checkParam);
     bool checkTransitionImpl(std::shared_ptr<const ContactTransitionCheckParam> checkParam,

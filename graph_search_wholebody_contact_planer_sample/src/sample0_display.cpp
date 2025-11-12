@@ -50,7 +50,7 @@ namespace graph_search_wholebody_contact_planner_sample{
     param->OptimizeTrajectory = true; // 軌道最適化を行うと外れ値的な接触や接触の数自体を減らせるが、特にはじめに一気に飛んでしまう
     param->toParam.initialShortcut = true;
     param->toParam.shortcut = true;
-    param->toParam.shortcutThre = param->gikParam.delta/10; // 小さくしすぎるとIKが解けない確率が増える
+    param->toParam.shortcutThre = param->gikParam.delta/2; // 小さくしすぎるとIKが解けない確率が増える
 
     // setup viewer
     std::shared_ptr<choreonoid_viewer::Viewer> viewer = std::make_shared<choreonoid_viewer::Viewer>();
@@ -63,7 +63,7 @@ namespace graph_search_wholebody_contact_planner_sample{
     global_inverse_kinematics_solver::frame2Link(initialPose, param->variables);
 
     graph_search_wholebody_contact_planner::WholeBodyLocomotionContactPlanner planner;
-    graph_search_wholebody_contact_planner::convertCWCPParam(*param, planner);
+    graph_search_wholebody_contact_planner::convertCWCPParam(*param, cwcpPath, planner);
     global_inverse_kinematics_solver::link2Frame(planner.variables, planner.currentContactState->frame);
     // planner.rejections
     std::vector<choreonoid_contact_candidate_generator::ContactCandidate> csc_;
@@ -126,22 +126,18 @@ namespace graph_search_wholebody_contact_planner_sample{
     planner.pikParam.debugLevel = 0;
     planner.pikParam.viewMilliseconds = -1;
     // planner.pikParam.viewer = viewer;
-    // planner.gikParam
     planner.viewer = viewer;
     planner.addCandidateDistance = 2.0;
     planner.bodyContactConstraints.push_back(generateBodyContactConstraint(planner.bodies, robot->link("LARM_JOINT7"), 0.02));
     planner.bodyContactConstraints.push_back(generateBodyContactConstraint(planner.bodies, robot->link("RARM_JOINT7"), 0.02));
     planner.bodyContactConstraints.push_back(generateBodyContactConstraint(planner.bodies, robot->link("LLEG_JOINT5"), 0.02));
-    planner.bodyContactConstraints.push_back(generateBodyContactConstraint(planner.bodies, robot->link("LLEG_JOINT5"), 0.02));
+    planner.bodyContactConstraints.push_back(generateBodyContactConstraint(planner.bodies, robot->link("RLEG_JOINT5"), 0.02));
 
-    for (int i=0;i<cwcpPath.size();i++) {
-      planner.guidePath.push_back(cwcpPath.at(i).first);
-    }
-
-    planner.addCandidateDistance = 1.2;
+    planner.addCandidateDistance = 0.1;
     planner.currentContactState->transition.push_back(planner.currentContactState->frame);
     planner.threads() = 20;
     planner.debugLevel() = 0;
+    // planner.maxExtendNum() = 1000;
     planner.solve();
 
     std::vector<graph_search_wholebody_contact_planner::ContactState> gsPath;
