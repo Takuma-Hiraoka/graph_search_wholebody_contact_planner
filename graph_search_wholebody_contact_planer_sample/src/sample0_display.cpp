@@ -40,7 +40,7 @@ namespace graph_search_wholebody_contact_planner_sample{
       std::shared_ptr<ik_constraint2::PositionConstraint> constraint = std::make_shared<ik_constraint2::PositionConstraint>();
       constraint->A_link() = robot->rootLink();
       constraint->B_localpos() = robot->rootLink()->T();
-      constraint->B_localpos().translation() += cnoid::Vector3(0.5,0,0.0);
+      constraint->B_localpos().translation() += cnoid::Vector3(0.5,0,0.5);
       constraint->weight() << 1.0, 1.0, 1.0, 1.0, 1.0, 1.0;
       constraint->precision() = 1e-3;
       param->goals.push_back(constraint);
