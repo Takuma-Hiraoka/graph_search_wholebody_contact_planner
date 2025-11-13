@@ -24,14 +24,14 @@ namespace graph_search_wholebody_contact_planner{
     ContactCandidate c2;
   };
   class ContactState {
-    friend bool operator==(const ContactState& a, const ContactState& b) { // ContactStateはlocalPoseのrotationの違いのみ無視する. rotationは接触時にZ方向を無視するため. graphとして再訪を防ぐために比較する.
+    friend bool operator==(const ContactState& a, const ContactState& b) { // ContactStateはlocalPoseのrotationの違いのみ無視する. rotationは接触時にZ方向を無視するため.リンクごとの接触を行うため、staticと接触している場合はリンク内の違いは無視する. graphとして再訪を防ぐために比較する.
       if (a.contacts.size() != b.contacts.size()) return false; // 数が違う
       for (int i=0;i<a.contacts.size();i++) {
         bool has_a = false;
         for (int j=0;(j<b.contacts.size()) && !has_a; j++) {
           if (!(a.contacts[i] == b.contacts[j])) continue; // 名前が違う
-          if (!((a.contacts[i].c1.linkName == b.contacts[j].c1.linkName) && (a.contacts[i].c1.localPose.translation() == b.contacts[j].c1.localPose.translation()) && (a.contacts[i].c2.linkName == b.contacts[j].c2.linkName) && (a.contacts[i].c2.localPose.translation() == b.contacts[j].c2.localPose.translation()) ||
-                ((a.contacts[i].c1.linkName == b.contacts[j].c2.linkName) && (a.contacts[i].c1.localPose.translation() == b.contacts[j].c2.localPose.translation()) && (a.contacts[i].c2.linkName == b.contacts[j].c1.linkName) && (a.contacts[i].c2.localPose.translation() == b.contacts[j].c1.localPose.translation())))) continue; // translationが違う
+          if (!((a.contacts[i].c1.linkName == b.contacts[j].c1.linkName) && ((a.contacts[i].c2.isStatic && b.contacts[i].c2.isStatic) || (a.contacts[i].c1.localPose.translation() == b.contacts[j].c1.localPose.translation())) && (a.contacts[i].c2.linkName == b.contacts[j].c2.linkName) && ((a.contacts[i].c1.isStatic && b.contacts[i].c1.isStatic) || (a.contacts[i].c2.localPose.translation() == b.contacts[j].c2.localPose.translation())) ||
+                ((a.contacts[i].c1.linkName == b.contacts[j].c2.linkName) && ((a.contacts[i].c2.isStatic && b.contacts[i].c1.isStatic) || (a.contacts[i].c1.localPose.translation() == b.contacts[j].c2.localPose.translation())) && (a.contacts[i].c2.linkName == b.contacts[j].c1.linkName) && ((a.contacts[i].c1.isStatic && b.contacts[i].c2.isStatic) || (a.contacts[i].c2.localPose.translation() == b.contacts[j].c1.localPose.translation()))))) continue; // translationが違う
           has_a = true;
         }
         if (!has_a) return false;

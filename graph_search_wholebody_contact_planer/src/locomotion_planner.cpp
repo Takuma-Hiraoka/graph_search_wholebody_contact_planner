@@ -355,7 +355,7 @@ namespace graph_search_wholebody_contact_planner{
         pose.translation() = cnoid::Vector3(contactCheckParam->guidePath[targetLevel].first[nominalIdx+0], contactCheckParam->guidePath[targetLevel].first[nominalIdx+1], contactCheckParam->guidePath[targetLevel].first[nominalIdx+2]);
         pose.linear() = cnoid::Quaternion(contactCheckParam->guidePath[targetLevel].first[nominalIdx+6], contactCheckParam->guidePath[targetLevel].first[nominalIdx+3], contactCheckParam->guidePath[targetLevel].first[nominalIdx+4], contactCheckParam->guidePath[targetLevel].first[nominalIdx+5]).toRotationMatrix();
         constraint->B_localpos() = pose;
-        constraint->weight() << 10.0, 10.0, 10.0, 10.0, 10.0, 10.0;
+        constraint->weight() << 10.0, 10.0, 10.0, 1.0, 1.0, 1.0;
         constraint->precision() = 1e10; // always satisfied
         nominals.push_back(constraint);
         nominalIdx += 7;
