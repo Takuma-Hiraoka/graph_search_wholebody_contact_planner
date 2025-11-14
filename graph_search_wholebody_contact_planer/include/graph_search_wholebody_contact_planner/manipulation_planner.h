@@ -1,17 +1,16 @@
 #pragma once
 
 #include <graph_search_wholebody_contact_planner/contact_graph.h>
-#include <c-wcp/c-wcp.h>
 
 namespace graph_search_wholebody_contact_planner{
-  class WholeBodyLocomotionContactPlanner : public WholeBodyContactPlanner { // リンクごとに接触を扱う一方で、接触点不動のためstateには接触ローカル座標を残す必要がある. このためstateはIKの誤差によって毎回違うものになり、graphではなくtree searchを行う.
+  class WholeBodyManipulationContactPlanner : public WholeBodyContactPlanner { // リンクごとに接触を扱う一方で、接触点不動のためstateには接触ローカル座標を残す必要がある. このためstateはIKの誤差によって毎回違うものになり、graphではなくtree searchを行う.
   public:
-    std::vector<std::pair<std::vector<double>, std::vector<Contact> > > guidePath; // ガイドパスのframeはリンクとvariableは順番・個数が同じ前提
+    std::pair<Contact, bool> targetContact; // Contactとattachかどうか
 
   public:
-    class LocomotionContactTransitionCheckParam : public graph_search_wholebody_contact_planner::WholeBodyContactPlanner::ContactTransitionCheckParam {
+    class ManipulationContactTransitionCheckParam : public graph_search_wholebody_contact_planner::WholeBodyContactPlanner::ContactTransitionCheckParam {
     public:
-      std::vector<std::pair<std::vector<double>, std::vector<Contact> > > guidePath;
+      std::pair<Contact, bool> targetContact;
     };
     std::shared_ptr<graph_search::Planner::TransitionCheckParam> generateCheckParam() override;
     void cloneCheckParam(std::shared_ptr<ContactTransitionCheckParam> checkParam) override;
@@ -24,5 +23,4 @@ namespace graph_search_wholebody_contact_planner{
                        const IKState& ikState
                        ) override;
   };
-  void convertCWCPParam(const cwcp::CWCPParam& param, const std::vector<std::pair<std::vector<double>, std::vector<std::shared_ptr<cwcp::Contact> > > >& cwcpPath, WholeBodyLocomotionContactPlanner& planner);
 }

@@ -33,6 +33,7 @@ add_library(${PROJECT_NAME} SHARED
   src/graph_search_wholebody_contact_planner.cpp
   src/util.cpp
   src/locomotion_planner.cpp
+  src/manipulation_planner.cpp
   )
 
 target_link_libraries(${PROJECT_NAME}  PUBLIC

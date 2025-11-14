@@ -59,9 +59,6 @@ namespace graph_search_wholebody_contact_planner_sample{
 
     std::vector<std::pair<std::vector<double>, std::vector<std::shared_ptr<cwcp::Contact> > > > cwcpPath;
     if(!cwcp::solveCWCP(param, cwcpPath)) std::cerr << "solveCWCP failed" << std::endl;
-    // param->pikParam.debugLevel = 3;
-    // param->pikParam.viewMilliseconds = -1;
-    // param->pikParam.viewer = viewer;
     std::vector<std::pair<std::vector<double>, std::vector<std::shared_ptr<cwcp::Contact> > > > keyPosePath;
     if(!cwcp::generateKeyPose(param, cwcpPath, keyPosePath)) std::cerr << "generateKeyPose failed" << std::endl;
 
