@@ -8,4 +8,4 @@ items:
       id: 1
       name: "GraphSearchWholeBodyContactPlannerSamplePlugin"
       plugin: GraphSearchWholeBodyContactPlannerSample
-      class: sample0_displayItem
+      class: sample0_locomotionItem

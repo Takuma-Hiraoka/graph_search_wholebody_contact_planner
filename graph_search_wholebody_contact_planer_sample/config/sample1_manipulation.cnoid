@@ -1,0 +1,11 @@
+items:
+  id: 0
+  name: "Root"
+  plugin: Base
+  class: RootItem
+  children:
+    -
+      id: 1
+      name: "GraphSearchWholeBodyContactPlannerSamplePlugin"
+      plugin: GraphSearchWholeBodyContactPlannerSample
+      class: sample1_manipulationItem

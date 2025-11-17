@@ -52,65 +52,132 @@ namespace graph_search_wholebody_contact_planner{
       if (!detach) {
         heuristic += nSatisfy;
         // TODO detachが可能になる（SCFRが存在するようになる）ときに良く
+        // targetContactに関係するbodyのみ
+        // targetContactに関係するbodyは既にfixed bodyとkinematics tree上で連結しているという仮定
+        // すなわち、targetContact側のbody及びlinkは不動
         std::vector<Contact> checkContacts = state.contacts;
         checkContacts.erase(std::remove(checkContacts.begin(), checkContacts.end(), contactCheckParam->targetContact.first), checkContacts.end());
-        for (int b=0; b<contactCheckParam->bodies.size(); b++) {
-          std::vector<cnoid::Isometry3> poses;
-          std::vector<Eigen::SparseMatrix<double,Eigen::RowMajor> > As;
-          std::vector<cnoid::VectorX> bs;
-          std::vector<Eigen::SparseMatrix<double,Eigen::RowMajor> > Cs;
-          std::vector<cnoid::VectorX> dls;
-          std::vector<cnoid::VectorX> dus;
-          Eigen::SparseMatrix<double,Eigen::RowMajor> C(11,6);
-          C.insert(0,2) = 1.0;
-          C.insert(1,0) = 1.0; C.insert(1,2) = 0.2;
-          C.insert(2,0) = -1.0; C.insert(2,2) = 0.2;
-          C.insert(3,1) = 1.0; C.insert(3,2) = 0.2;
-          C.insert(4,1) = -1.0; C.insert(4,2) = 0.2;
-          C.insert(5,2) = 0.05; C.insert(5,3) = 1.0;
-          C.insert(6,2) = 0.05; C.insert(6,3) = -1.0;
-          C.insert(7,2) = 0.05; C.insert(7,4) = 1.0;
-          C.insert(8,2) = 0.05; C.insert(8,4) = -1.0;
-          C.insert(9,2) = 0.005; C.insert(9,5) = 1.0;
-          C.insert(10,2) = 0.005; C.insert(10,5) = -1.0;
-          cnoid::VectorX dl = Eigen::VectorXd::Zero(11);
-          cnoid::VectorX du = 1e10 * Eigen::VectorXd::Ones(11);
-          du[0] = 2000.0;
-          for (int c=0; c<checkContacts.size(); c++) {
-            if (checkContacts[c].c1.bodyName == contactCheckParam->bodies[b]->name()) {
-              if (contactCheckParam->bodies[b]->link(checkContacts[c].c1.linkName)) {
-                poses.push_back(contactCheckParam->bodies[b]->link(checkContacts[c].c1.linkName)->T() * checkContacts[c].c1.localPose);
-                As.emplace_back(0,6);
-                bs.emplace_back(0);
-                Cs.push_back(C);
-                dls.push_back(dl);
-                dus.push_back(du);
-              } else std::cerr << "[WholeBodyManipulationContactPlanner] contactCheckParam->bodies[b] does not have checkContacts[c].c1.linkName !!" << std::endl;
-            }else if (checkContacts[c].c2.bodyName == contactCheckParam->bodies[b]->name()) {
-              if (contactCheckParam->bodies[b]->link(checkContacts[c].c2.linkName)) {
-                poses.push_back(contactCheckParam->bodies[b]->link(checkContacts[c].c2.linkName)->T() * checkContacts[c].c2.localPose);
-                As.emplace_back(0,6);
-                bs.emplace_back(0);
-                Cs.push_back(C);
-                dls.push_back(dl);
-                dus.push_back(du);
-              } else std::cerr << "[WholeBodyManipulationContactPlanner] contactCheckParam->bodies[b] does not have checkContacts[c].c2.linkName !!" << std::endl;
+        Eigen::SparseMatrix<double,Eigen::RowMajor> C(11,6);
+        C.insert(0,2) = 1.0;
+        C.insert(1,0) = 1.0; C.insert(1,2) = 0.2;
+        C.insert(2,0) = -1.0; C.insert(2,2) = 0.2;
+        C.insert(3,1) = 1.0; C.insert(3,2) = 0.2;
+        C.insert(4,1) = -1.0; C.insert(4,2) = 0.2;
+        C.insert(5,2) = 0.05; C.insert(5,3) = 1.0;
+        C.insert(6,2) = 0.05; C.insert(6,3) = -1.0;
+        C.insert(7,2) = 0.05; C.insert(7,4) = 1.0;
+        C.insert(8,2) = 0.05; C.insert(8,4) = -1.0;
+        C.insert(9,2) = 0.005; C.insert(9,5) = 1.0;
+        C.insert(10,2) = 0.005; C.insert(10,5) = -1.0;
+        cnoid::VectorX dl = Eigen::VectorXd::Zero(11);
+        cnoid::VectorX du = 1e10 * Eigen::VectorXd::Ones(11);
+        du[0] = 2000.0;
+        // targetContact.first.c1
+        if (!targetContact.first.c1.isStatic) {
+          bool solved = false;
+          for (int b=0; b<contactCheckParam->bodies.size(); b++) {
+            if (contactCheckParam->bodies[b]->name() == targetContact.first.c1.bodyName) {
+              if (!contactCheckParam->bodies[b]->link(targetContact.first.c1.linkName)) {
+                std::cerr << "[WholeBodyManipulationContactPlanner] contactCheckParam->bodies[b] does not have targetContact.first.c1.linkName !!" << std::endl;
+                continue;
+              }
+              std::vector<cnoid::Isometry3> poses;
+              std::vector<Eigen::SparseMatrix<double,Eigen::RowMajor> > As;
+              std::vector<cnoid::VectorX> bs;
+              std::vector<Eigen::SparseMatrix<double,Eigen::RowMajor> > Cs;
+              std::vector<cnoid::VectorX> dls;
+              std::vector<cnoid::VectorX> dus;
+              for (int c=0; c<checkContacts.size(); c++) {
+                if (checkContacts[c].c1.bodyName == targetContact.first.c1.bodyName) {
+                  if (contactCheckParam->bodies[b]->link(checkContacts[c].c1.linkName)) {
+                    poses.push_back(contactCheckParam->bodies[b]->link(checkContacts[c].c1.linkName)->T() * checkContacts[c].c1.localPose);
+                    As.emplace_back(0,6);
+                    bs.emplace_back(0);
+                    Cs.push_back(C);
+                    dls.push_back(dl);
+                    dus.push_back(du);
+                  } else std::cerr << "[WholeBodyManipulationContactPlanner] contactCheckParam->bodies[b] does not have checkContacts[c].c1.linkName !!" << std::endl;
+                } else if (checkContacts[c].c2.bodyName == targetContact.first.c1.bodyName) {
+                  if (contactCheckParam->bodies[b]->link(checkContacts[c].c2.linkName)) {
+                    poses.push_back(contactCheckParam->bodies[b]->link(checkContacts[c].c2.linkName)->T() * checkContacts[c].c2.localPose);
+                    As.emplace_back(0,6);
+                    bs.emplace_back(0);
+                    Cs.push_back(C);
+                    dls.push_back(dl);
+                    dus.push_back(du);
+                  } else std::cerr << "[WholeBodyManipulationContactPlanner] contactCheckParam->bodies[b] does not have checkContacts[c].c2.linkName !!" << std::endl;
+                }
+              }
+              scfr_solver::SCFRParam scfrParam;
+              if (poses.size() == 0) continue;
+              solved = ik_constraint2_keep_collision_scfr::checkSCFRExistance(poses,
+                                                                              As,
+                                                                              bs,
+                                                                              Cs,
+                                                                              dls,
+                                                                              dus,
+                                                                              contactCheckParam->bodies[b]->mass(),
+                                                                              scfrParam
+                                                                              );
             }
           }
-          scfr_solver::SCFRParam scfrParam;
-          bool solved = ik_constraint2_keep_collision_scfr::checkSCFRExistance(poses,
-                                                                               As,
-                                                                               bs,
-                                                                               Cs,
-                                                                               dls,
-                                                                               dus,
-                                                                               contactCheckParam->bodies[b]->mass(),
-                                                                               scfrParam
-                                                                               );
           if (!solved) heuristic += scfrNSatisfy;
         }
+        // targetContact.first.c2
+        if (!targetContact.first.c2.isStatic) {
+          bool solved = false;
+          for (int b=0; b<contactCheckParam->bodies.size(); b++) {
+            if (contactCheckParam->bodies[b]->name() == targetContact.first.c2.bodyName) {
+              if (!contactCheckParam->bodies[b]->link(targetContact.first.c2.linkName)) {
+                std::cerr << "[WholeBodyManipulationContactPlanner] contactCheckParam->bodies[b] does not have targetContact.first.c2.linkName !!" << std::endl;
+                continue;
+              }
+              std::vector<cnoid::Isometry3> poses;
+              std::vector<Eigen::SparseMatrix<double,Eigen::RowMajor> > As;
+              std::vector<cnoid::VectorX> bs;
+              std::vector<Eigen::SparseMatrix<double,Eigen::RowMajor> > Cs;
+              std::vector<cnoid::VectorX> dls;
+              std::vector<cnoid::VectorX> dus;
+              for (int c=0; c<checkContacts.size(); c++) {
+                if (checkContacts[c].c1.bodyName == targetContact.first.c2.bodyName) {
+                  if (contactCheckParam->bodies[b]->link(checkContacts[c].c1.linkName)) {
+                    poses.push_back(contactCheckParam->bodies[b]->link(checkContacts[c].c1.linkName)->T() * checkContacts[c].c1.localPose);
+                    As.emplace_back(0,6);
+                    bs.emplace_back(0);
+                    Cs.push_back(C);
+                    dls.push_back(dl);
+                    dus.push_back(du);
+                  } else std::cerr << "[WholeBodyManipulationContactPlanner] contactCheckParam->bodies[b] does not have checkContacts[c].c1.linkName !!" << std::endl;
+                } else if (checkContacts[c].c2.bodyName == targetContact.first.c2.bodyName) {
+                  if (contactCheckParam->bodies[b]->link(checkContacts[c].c2.linkName)) {
+                    poses.push_back(contactCheckParam->bodies[b]->link(checkContacts[c].c2.linkName)->T() * checkContacts[c].c2.localPose);
+                    As.emplace_back(0,6);
+                    bs.emplace_back(0);
+                    Cs.push_back(C);
+                    dls.push_back(dl);
+                    dus.push_back(du);
+                  } else std::cerr << "[WholeBodyManipulationContactPlanner] contactCheckParam->bodies[b] does not have checkContacts[c].c2.linkName !!" << std::endl;
+                }
+              }
+              scfr_solver::SCFRParam scfrParam;
+              if (poses.size() == 0) continue;
+              solved = ik_constraint2_keep_collision_scfr::checkSCFRExistance(poses,
+                                                                              As,
+                                                                              bs,
+                                                                              Cs,
+                                                                              dls,
+                                                                              dus,
+                                                                              contactCheckParam->bodies[b]->mass(),
+                                                                              scfrParam
+                                                                              );
+            }
+          }
+          if (!solved) heuristic += scfrNSatisfy;
+        }
+
       }
     }
+    // std::cerr << "heuristic " << heuristic << std::endl;
     node->heuristic() = heuristic;
   }
 
@@ -184,8 +251,9 @@ namespace graph_search_wholebody_contact_planner{
         if ((contactCheckParam->bodies[b]->name() == contactDynamicCandidatesBuf[i]->bodyName) && contactCheckParam->bodies[b]->joint(contactDynamicCandidatesBuf[i]->linkName)) rootPos1 = contactCheckParam->bodies[b]->rootLink()->p();
       }
       for (int j=i+1; j<contactDynamicCandidatesBuf.size(); j++) {
-        // 同じリンク内の候補同士は接触できない
-        if ((contactDynamicCandidatesBuf[i]->bodyName == contactDynamicCandidatesBuf[j]->bodyName) && (contactDynamicCandidatesBuf[i]->linkName == contactDynamicCandidatesBuf[j]->linkName)) continue;
+        // 同じBody内の候補同士は接触できない
+        // TODO Link内にする?
+        if ((contactDynamicCandidatesBuf[i]->bodyName == contactDynamicCandidatesBuf[j]->bodyName)/* && (contactDynamicCandidatesBuf[i]->linkName == contactDynamicCandidatesBuf[j]->linkName)*/) continue;
         cnoid::Vector3 rootPos2;
         for (int b=0; b<contactCheckParam->bodies.size(); b++) {
           if ((contactCheckParam->bodies[b]->name() == contactDynamicCandidatesBuf[j]->bodyName) && contactCheckParam->bodies[b]->joint(contactDynamicCandidatesBuf[j]->linkName)) rootPos2 = std::static_pointer_cast<WholeBodyContactPlanner::ContactTransitionCheckParam>(checkParam)->bodies[b]->rootLink()->p();
@@ -195,14 +263,14 @@ namespace graph_search_wholebody_contact_planner{
         // localPoseが違ったとしても既に接触しているリンク同士を更に接触させることはしない
         bool found = false;
         for (int k=0; k<extend_state.contacts.size() && !found; k++) {
-          if (extend_state.contacts[k] == Contact(*(contactDynamicCandidates[i]), *(contactDynamicCandidates[j]))) found = true;
+          if (extend_state.contacts[k] == Contact(*(contactDynamicCandidatesBuf[i]), *(contactDynamicCandidatesBuf[j]))) found = true;
         }
         if (found) continue;
 
         std::shared_ptr<ContactNode> newNode = std::make_shared<ContactNode>();
         newNode->parent() = extend_node;
         newNode->state() = extend_state;
-        Contact c = Contact(*(contactDynamicCandidates[i]), *(contactDynamicCandidates[j]));
+        Contact c = Contact(*(contactDynamicCandidatesBuf[i]), *(contactDynamicCandidatesBuf[j]));
         newNode->state().contacts.push_back(c);
         adjacentNodes.push_back(newNode);
       }

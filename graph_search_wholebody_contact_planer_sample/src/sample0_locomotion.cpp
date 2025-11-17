@@ -6,7 +6,7 @@
 #include "world_common.h"
 
 namespace graph_search_wholebody_contact_planner_sample{
-  void sample0_display(){
+  void sample0_locomotion(){
     cnoid::BodyPtr obstacle;
     std::shared_ptr<cwcp::CWCPParam> param = std::make_shared<cwcp::CWCPParam>();
     generateWallWorld(obstacle, param);
@@ -85,7 +85,7 @@ namespace graph_search_wholebody_contact_planner_sample{
       rleg->bodyName = robot->name();
       rleg->linkName = "RLEG_JOINT5";
       rleg->isStatic = false;
-      rleg->localPose.translation() = cnoid::Vector3(0,0,-0.11);
+      rleg->localPose.translation() = cnoid::Vector3(0,0,-0.1);
       planner.contactDynamicCandidates.push_back(rleg);
     }
     // lleg
@@ -94,7 +94,7 @@ namespace graph_search_wholebody_contact_planner_sample{
       lleg->bodyName = robot->name();
       lleg->linkName = "LLEG_JOINT5";
       lleg->isStatic = false;
-      lleg->localPose.translation() = cnoid::Vector3(0,0,-0.11);
+      lleg->localPose.translation() = cnoid::Vector3(0,0,-0.1);
       planner.contactDynamicCandidates.push_back(lleg);
     }
     // rarm
