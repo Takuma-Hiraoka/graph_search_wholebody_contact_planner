@@ -170,24 +170,71 @@ namespace graph_search_wholebody_contact_planner_sample{
     planner.threads() = 20;
     planner.debugLevel() = 0;
     planner.maxExtendNum() = 1e8;
-    planner.solve();
-    std::cerr << "solved" << std::endl;
+    if (planner.solve()) std::cerr << "detach solved" << std::endl;
+    else std::cerr << "detach failed" << std::endl;
 
-    std::vector<graph_search_wholebody_contact_planner::ContactState> gsPath;
-    planner.goalPath(gsPath);
+    std::vector<graph_search_wholebody_contact_planner::ContactState> gsDetachPath;
+    planner.goalPath(gsDetachPath);
+
+    planner.graph().clear();
+    planner.setGoal(nullptr);
+    global_inverse_kinematics_solver::frame2Link(gsDetachPath[gsDetachPath.size()-1].frame, planner.variables);
+    global_inverse_kinematics_solver::link2Frame(planner.variables, planner.currentContactState->frame);
+    for(int b=0; b<param->bodies.size(); b++) {
+      param->bodies[b]->calcForwardKinematics(false);
+      param->bodies[b]->calcCenterOfMass();
+    }
+    planner.currentContactState->contacts = gsDetachPath[gsDetachPath.size()-1].contacts;
+    // Goal
+    {
+      graph_search_wholebody_contact_planner::ContactCandidate c1;
+      c1.bodyName = box->name();
+      c1.linkName = "BOX_link";
+      c1.isStatic = false;
+      graph_search_wholebody_contact_planner::ContactCandidate c2;
+      c2.bodyName = "floor";
+      c2.linkName = "table2";
+      c2.isStatic = true;
+      planner.targetContact = std::make_pair(graph_search_wholebody_contact_planner::Contact(c1,c2), true);
+    }
+    std::cerr << *planner.currentContactState << std::endl;
+    if (planner.solve()) std::cerr << "attach solved" << std::endl;
+    else std::cerr << "attach failed" << std::endl;
+
+    std::vector<graph_search_wholebody_contact_planner::ContactState> gsAttachPath;
+    planner.goalPath(gsAttachPath);
 
     while (true) {
-      for(int i=0;i<gsPath.size();i++){
-        for (int j=0;j<gsPath[i].transition.size();j++) {
-          global_inverse_kinematics_solver::frame2Link(gsPath[i].transition[j], planner.variables);
+      for(int i=0;i<gsDetachPath.size();i++){
+        for (int j=0;j<gsDetachPath[i].transition.size();j++) {
+          global_inverse_kinematics_solver::frame2Link(gsDetachPath[i].transition[j], planner.variables);
           for(int b=0; b<param->bodies.size(); b++) {
             param->bodies[b]->calcForwardKinematics(false);
             param->bodies[b]->calcCenterOfMass();
           }
           viewer->drawObjects();
-          std::this_thread::sleep_for(std::chrono::milliseconds(1000 / gsPath[i].transition.size()));
+          std::this_thread::sleep_for(std::chrono::milliseconds(1000 / gsDetachPath[i].transition.size()));
         }
-        global_inverse_kinematics_solver::frame2Link(gsPath[i].frame, planner.variables);
+        global_inverse_kinematics_solver::frame2Link(gsDetachPath[i].frame, planner.variables);
+        for(int b=0; b<param->bodies.size(); b++) {
+          param->bodies[b]->calcForwardKinematics(false);
+          param->bodies[b]->calcCenterOfMass();
+        }
+        viewer->drawObjects();
+        std::this_thread::sleep_for(std::chrono::milliseconds(1000));
+      }
+
+      for(int i=0;i<gsAttachPath.size();i++){
+        for (int j=0;j<gsAttachPath[i].transition.size();j++) {
+          global_inverse_kinematics_solver::frame2Link(gsAttachPath[i].transition[j], planner.variables);
+          for(int b=0; b<param->bodies.size(); b++) {
+            param->bodies[b]->calcForwardKinematics(false);
+            param->bodies[b]->calcCenterOfMass();
+          }
+          viewer->drawObjects();
+          std::this_thread::sleep_for(std::chrono::milliseconds(1000 / gsAttachPath[i].transition.size()));
+        }
+        global_inverse_kinematics_solver::frame2Link(gsAttachPath[i].frame, planner.variables);
         for(int b=0; b<param->bodies.size(); b++) {
           param->bodies[b]->calcForwardKinematics(false);
           param->bodies[b]->calcCenterOfMass();
