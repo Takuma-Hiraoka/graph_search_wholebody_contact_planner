@@ -32,6 +32,7 @@ add_library(CnoidGraphSearchWholeBodyContactPlannerSamplePlugin SHARED
   src/jaxon_common.cpp
   src/sample0_locomotion.cpp
   src/sample1_manipulation.cpp
+  src/sample2_locomanipulation.cpp
   )
 target_link_libraries(CnoidGraphSearchWholeBodyContactPlannerSamplePlugin
   ${catkin_LIBRARIES}
