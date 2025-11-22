@@ -64,8 +64,9 @@ namespace graph_search_wholebody_contact_planner_sample{
       param->goals.push_back(constraint);
     }
 
-    param->gikParam.delta = 0.2;
-    param->gikParam.goalBias = 0.4;
+    param->gikParam.range = 0.5;
+    param->gikParam.delta = 0.45;
+    param->gikParam.goalBias = 0.8;
     param->gikParam.timeout = 60;
     param->gikParam.threads = 20;
     param->OptimizeTrajectory = true;
@@ -85,8 +86,8 @@ namespace graph_search_wholebody_contact_planner_sample{
     std::vector<std::pair<std::vector<double>, std::vector<std::shared_ptr<cwcp::Contact> > > > cwcpPath;
     if(!cwcp::solveCWCP(param, cwcpPath)) std::cerr << "solveCWCP failed" << std::endl;
     std::vector<std::pair<std::vector<double>, std::vector<std::shared_ptr<cwcp::Contact> > > > keyPosePath;
-    //    if(!cwcp::generateKeyPose(param, cwcpPath, keyPosePath)) std::cerr << "generateKeyPose failed" << std::endl;
-    keyPosePath = cwcpPath;
+    if(!cwcp::generateKeyPose(param, cwcpPath, keyPosePath)) std::cerr << "generateKeyPose failed" << std::endl;
+    //    keyPosePath = cwcpPath;
 
     global_inverse_kinematics_solver::frame2Link(initialPose, param->variables);
 
@@ -114,8 +115,8 @@ namespace graph_search_wholebody_contact_planner_sample{
       cc->linkName = cdc_[i].link_name;
       cc->localPose.translation() = cdc_[i].p.cast<double>();
       cc->localPose.linear() = cdc_[i].R.cast<double>();
-      cc->isStatic = false;
-      locoPlanner.contactDynamicCandidates.push_back(cc);
+      cc->isStatic = true;
+      locoPlanner.contactStaticCandidates.push_back(cc);
     }
     {
       std::shared_ptr<graph_search_wholebody_contact_planner::ContactCandidate> rleg = std::make_shared<graph_search_wholebody_contact_planner::ContactCandidate>();
@@ -153,16 +154,16 @@ namespace graph_search_wholebody_contact_planner_sample{
       locoPlanner.contactDynamicCandidates.push_back(larm);
     }
     std::vector<cnoid::SgNodePtr> drawOnObjects;
-    std::vector<cnoid::SgNodePtr> csc = graph_search_wholebody_contact_planner::generateCandidateMakers(locoPlanner.bodies, locoPlanner.contactStaticCandidates);
-    std::vector<cnoid::SgNodePtr> cdc = graph_search_wholebody_contact_planner::generateCandidateMakers(locoPlanner.bodies, locoPlanner.contactDynamicCandidates);
-    drawOnObjects.insert(drawOnObjects.end(), csc.begin(), csc.end());
-    drawOnObjects.insert(drawOnObjects.end(), cdc.begin(), cdc.end());
+    // std::vector<cnoid::SgNodePtr> csc = graph_search_wholebody_contact_planner::generateCandidateMakers(locoPlanner.bodies, locoPlanner.contactStaticCandidates);
+    // std::vector<cnoid::SgNodePtr> cdc = graph_search_wholebody_contact_planner::generateCandidateMakers(locoPlanner.bodies, locoPlanner.contactDynamicCandidates);
+    // drawOnObjects.insert(drawOnObjects.end(), csc.begin(), csc.end());
+    // drawOnObjects.insert(drawOnObjects.end(), cdc.begin(), cdc.end());
 
     viewer->drawOn(drawOnObjects);
     viewer->drawObjects();
 
-    locoPlanner.pikParam.debugLevel = 0;
-    locoPlanner.pikParam.viewMilliseconds = -1;
+    // locoPlanner.pikParam.debugLevel = 3;
+    // locoPlanner.pikParam.viewMilliseconds = -1;
     // locoPlanner.pikParam.viewer = viewer;
     locoPlanner.viewer = viewer;
     locoPlanner.bodyContactConstraints.push_back(generateBodyContactConstraint(locoPlanner.bodies, robot->link("LARM_JOINT7"), 0.02));
@@ -170,7 +171,8 @@ namespace graph_search_wholebody_contact_planner_sample{
     locoPlanner.bodyContactConstraints.push_back(generateBodyContactConstraint(locoPlanner.bodies, robot->link("LLEG_JOINT5"), 0.02));
     locoPlanner.bodyContactConstraints.push_back(generateBodyContactConstraint(locoPlanner.bodies, robot->link("RLEG_JOINT5"), 0.02));
 
-    locoPlanner.addCandidateDistance = 0.1;
+    locoPlanner.addCandidateDistance = 1.2;
+    locoPlanner.addNearGuideCandidateDistance = 0.2;
     locoPlanner.currentContactState->transition.push_back(locoPlanner.currentContactState->frame);
     locoPlanner.threads() = 20;
     locoPlanner.debugLevel() = 0;

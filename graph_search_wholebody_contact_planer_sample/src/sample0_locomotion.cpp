@@ -134,7 +134,8 @@ namespace graph_search_wholebody_contact_planner_sample{
     planner.bodyContactConstraints.push_back(generateBodyContactConstraint(planner.bodies, robot->link("LLEG_JOINT5"), 0.02));
     planner.bodyContactConstraints.push_back(generateBodyContactConstraint(planner.bodies, robot->link("RLEG_JOINT5"), 0.02));
 
-    planner.addCandidateDistance = 0.1;
+    planner.addCandidateDistance = 1.2;
+    planner.addNearGuideCandidateDistance = 0.1;
     planner.currentContactState->transition.push_back(planner.currentContactState->frame);
     planner.threads() = 20;
     planner.debugLevel() = 0;

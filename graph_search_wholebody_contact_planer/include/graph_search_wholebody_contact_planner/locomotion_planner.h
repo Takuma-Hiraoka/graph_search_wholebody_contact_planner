@@ -6,11 +6,13 @@
 namespace graph_search_wholebody_contact_planner{
   class WholeBodyLocomotionContactPlanner : public WholeBodyContactPlanner { // リンクごとに接触を扱う一方で、接触点不動のためstateには接触ローカル座標を残す必要がある. このためstateはIKの誤差によって毎回違うものになり、graphではなくtree searchを行う.
   public:
+    double addNearGuideCandidateDistance = 0.2;
     std::vector<std::pair<std::vector<double>, std::vector<Contact> > > guidePath; // ガイドパスのframeはリンクとvariableは順番・個数が同じ前提
 
   public:
     class LocomotionContactTransitionCheckParam : public graph_search_wholebody_contact_planner::WholeBodyContactPlanner::ContactTransitionCheckParam {
     public:
+      double addNearGuideCandidateDistance = 0.2;
       std::vector<std::pair<std::vector<double>, std::vector<Contact> > > guidePath;
     };
     std::shared_ptr<graph_search::Planner::TransitionCheckParam> generateCheckParam() override;
