@@ -11,4 +11,6 @@ namespace graph_search_wholebody_contact_planner_sample{
                          const std::shared_ptr<cwcp::CWCPParam>& param);
   void generateBOX(cnoid::BodyPtr& box,
                    const std::shared_ptr<cwcp::CWCPParam>& param);
+  void generateCUBE(cnoid::BodyPtr& cube,
+                    const std::shared_ptr<cwcp::CWCPParam>& param);
 }

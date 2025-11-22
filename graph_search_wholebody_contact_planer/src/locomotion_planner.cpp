@@ -16,50 +16,62 @@ namespace graph_search_wholebody_contact_planner{
     contactCheckParam->guidePath = this->guidePath;
   }
 
-  inline double calcDiff(const std::vector<cnoid::LinkPtr>& variables, const ContactState& state, const std::pair<std::vector<double>, std::vector<Contact> >& guide) {
-    double diff = 0;
-    unsigned int idx=0;
-    double rootWeight = 1e2;
-    double contactWeight = 1e1;
-    for (int i=0; i<state.contacts.size(); i++) {
-      bool found = false;
-      for (int c=0; c<guide.second.size() && !found; c++) {
-        if ((state.contacts[i].c1.bodyName == guide.second[c].c1.bodyName) && (state.contacts[i].c1.linkName == guide.second[c].c1.linkName) && state.contacts[i].c2.isStatic) {
-          found = true;
-          diff += (state.contacts[i].c2.localPose.translation() - guide.second[c].c2.localPose.translation()).norm() * contactWeight;
-        } else if ((state.contacts[i].c2.bodyName == guide.second[c].c1.bodyName) && (state.contacts[i].c2.linkName == guide.second[c].c1.linkName) && state.contacts[i].c1.isStatic) {
-          found = true;
-          diff += (state.contacts[i].c1.localPose.translation() - guide.second[c].c2.localPose.translation()).norm() * contactWeight;
-        }
-      }
-      if (!found) diff += 1e2;
-    }
-    for (int l=0; l<variables.size(); l++) {
-      if (variables[l]->isRevoluteJoint() || variables[l]->isPrismaticJoint()) {
-        //diff += std::abs(state.frame[idx] - guide.first[idx]);
-        idx+=1;
-      } else if (variables[l]->isFreeJoint()) {
-        diff += (cnoid::Vector3(state.frame[idx+0], state.frame[idx+1], state.frame[idx+2]) - cnoid::Vector3(guide.first[idx+0], guide.first[idx+1], guide.first[idx+2])).norm() * rootWeight;
-        diff += std::abs(cnoid::AngleAxis(cnoid::Quaternion(state.frame[idx+6],state.frame[idx+3],state.frame[idx+4],state.frame[idx+5]).toRotationMatrix().transpose() * cnoid::Quaternion(guide.first[idx+6],guide.first[idx+3],guide.first[idx+4],guide.first[idx+5]).toRotationMatrix()).angle()) * 1e1;
-        idx+=7;
-      }
-    }
-    return diff;
-  }
-
-  bool WholeBodyLocomotionContactPlanner::isGoalSatisfied(std::shared_ptr<graph_search::Planner::TransitionCheckParam> checkParam) {
-    ContactState state = std::static_pointer_cast<WholeBodyContactPlanner::ContactTransitionCheckParam>(checkParam)->postState;
-    std::shared_ptr<LocomotionContactTransitionCheckParam> contactCheckParam = std::static_pointer_cast<WholeBodyLocomotionContactPlanner::LocomotionContactTransitionCheckParam>(checkParam);
+  inline std::pair<double, unsigned int> calcRootDiff(const std::vector<cnoid::LinkPtr>& variables, const ContactState& state, const std::vector<std::pair<std::vector<double>, std::vector<Contact> > >& guidePath) {
     int nearestIdx = -1;
     double diffMin = std::numeric_limits<double>::max();
-    for (int i=1; i<contactCheckParam->guidePath.size(); i++) {
+    double rootWeight = 1e2;
+    for (int i=1; i<guidePath.size(); i++) {
       double diff = 0;
-      diff += calcDiff(contactCheckParam->variables, state, contactCheckParam->guidePath[i]);
+      unsigned int idx=0;
+      for (int l=0; l<variables.size(); l++) {
+        if (variables[l]->isRevoluteJoint() || variables[l]->isPrismaticJoint()) {
+          //diff += std::abs(state.frame[idx] - guidePath[i].first[idx]);
+          idx+=1;
+        } else if (variables[l]->isFreeJoint()) {
+          diff += (cnoid::Vector3(state.frame[idx+0], state.frame[idx+1], state.frame[idx+2]) - cnoid::Vector3(guidePath[i].first[idx+0], guidePath[i].first[idx+1], guidePath[i].first[idx+2])).norm() * rootWeight;
+          diff += std::abs(cnoid::AngleAxis(cnoid::Quaternion(state.frame[idx+6],state.frame[idx+3],state.frame[idx+4],state.frame[idx+5]).toRotationMatrix().transpose() * cnoid::Quaternion(guidePath[i].first[idx+6],guidePath[i].first[idx+3],guidePath[i].first[idx+4],guidePath[i].first[idx+5]).toRotationMatrix()).angle()) * 1e1;
+          idx+=7;
+        }
+      }
       if (diff < diffMin) {
         diffMin = diff;
         nearestIdx = i;
       }
     }
+    return std::make_pair(diffMin, nearestIdx);
+  }
+
+  inline std::pair<double, unsigned int> calcContactDiff(const std::vector<cnoid::LinkPtr>& variables, const Contact& contact, const std::vector<std::pair<std::vector<double>, std::vector<Contact> > >& guidePath) {
+    int nearestIdx = -1;
+    double diffMin = std::numeric_limits<double>::max();
+    double contactWeight = 1e1;
+    for (int i=1; i<guidePath.size(); i++) {
+      double diff = 0;
+      unsigned int idx=0;
+      bool found = false;
+      for (int c=0; c<guidePath[i].second.size() && !found; c++) {
+        if ((contact.c1.bodyName == guidePath[i].second[c].c1.bodyName) && (contact.c1.linkName == guidePath[i].second[c].c1.linkName) && contact.c2.isStatic) {
+          found = true;
+          diff += (contact.c2.localPose.translation() - guidePath[i].second[c].c2.localPose.translation()).norm() * contactWeight;
+        } else if ((contact.c2.bodyName == guidePath[i].second[c].c1.bodyName) && (contact.c2.linkName == guidePath[i].second[c].c1.linkName) && contact.c1.isStatic) {
+          found = true;
+          diff += (contact.c1.localPose.translation() - guidePath[i].second[c].c2.localPose.translation()).norm() * contactWeight;
+        }
+      }
+      if (found && (diff < diffMin)) {
+        diffMin = diff;
+        nearestIdx = i;
+      }
+    }
+    return std::make_pair(diffMin, nearestIdx);
+  }
+
+  bool WholeBodyLocomotionContactPlanner::isGoalSatisfied(std::shared_ptr<graph_search::Planner::TransitionCheckParam> checkParam) {
+    ContactState state = std::static_pointer_cast<WholeBodyContactPlanner::ContactTransitionCheckParam>(checkParam)->postState;
+    std::shared_ptr<LocomotionContactTransitionCheckParam> contactCheckParam = std::static_pointer_cast<WholeBodyLocomotionContactPlanner::LocomotionContactTransitionCheckParam>(checkParam);
+    std::pair<double, unsigned int> diff = calcRootDiff(contactCheckParam->variables, state, contactCheckParam->guidePath);
+    double diffMin = diff.first;
+    int nearestIdx = diff.second;
 
     std::cerr << "contactCheckParam->guidePath.size() " << contactCheckParam->guidePath.size() <<  " nearestIdx " << nearestIdx << " heuristic " << (contactCheckParam->guidePath.size() - 1 - nearestIdx) * 1e3 + diffMin << std::endl;
     return ((contactCheckParam->guidePath.size() - 1 - nearestIdx) * 1e3 + diffMin) < 1e1;
@@ -71,18 +83,19 @@ namespace graph_search_wholebody_contact_planner{
     if (state.transition.size() < 1) std::cerr << "[WholeBodyLocomotionContactPlanner] error! state.transition.size() < 1" << std::endl;
     if (state.transition[0].size() != state.frame.size()) std::cerr << "[WholeBodyLocomotionContactPlanner] error! state.transition[0].size() and state.frame.size() are mismatched!" << std::endl;
     if (state.frame.size() != contactCheckParam->guidePath[0].first.size()) std::cerr << "[WholeBodyLocomotionContactPlanner] error! state.frame.size() and contactCheckParam.guidePath[0].size() are mismatched!" << std::endl;
-    unsigned int nearestIdx = 0;
-    double diffMin = std::numeric_limits<double>::max();
-    for (int i=1; i<contactCheckParam->guidePath.size(); i++) {
-      double diff = 0;
-      diff += calcDiff(contactCheckParam->variables, state, contactCheckParam->guidePath[i]);
-      if (diff < diffMin) {
-        diffMin = diff;
-        nearestIdx = i;
-      }
+    // rootLink, それぞれのcontactで最も近いガイドとの差分とindexを取得し、差分の合計をheuristicに、indexのうち最も進んでいないものをlevelとする
+    std::pair<double, unsigned int> rootDiff = calcRootDiff(contactCheckParam->variables, state, contactCheckParam->guidePath);
+    double diffSum = rootDiff.first;
+    double nearestIdxSum = rootDiff.second;
+    for (int i=0; i<state.contacts.size(); i++) {
+      std::pair<double, unsigned int> contactDiff = calcContactDiff(contactCheckParam->variables, state.contacts[i], contactCheckParam->guidePath);
+      diffSum += contactDiff.first;
+      nearestIdxSum += contactDiff.second;
     }
-    std::static_pointer_cast<ContactNode>(node)->level() = nearestIdx;
-    node->heuristic() = (contactCheckParam->guidePath.size() - 1 - nearestIdx) * 1e3 + diffMin;
+    double nearestIdx = (nearestIdxSum / (state.contacts.size()+1));
+
+    std::static_pointer_cast<ContactNode>(node)->level() = (unsigned int)nearestIdx;
+    node->heuristic() = (contactCheckParam->guidePath.size() - 1 - nearestIdx) * 1e3 + diffSum;
   }
 
   std::vector<std::shared_ptr<graph_search::Node> > WholeBodyLocomotionContactPlanner::gatherAdjacentNodes(std::shared_ptr<graph_search::Planner::TransitionCheckParam> checkParam, std::shared_ptr<graph_search::Node> extend_node) {

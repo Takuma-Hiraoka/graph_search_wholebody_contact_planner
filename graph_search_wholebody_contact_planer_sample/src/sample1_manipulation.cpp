@@ -159,7 +159,6 @@ namespace graph_search_wholebody_contact_planner_sample{
     planner.pikParam.viewMilliseconds = -1;
     // planner.pikParam.viewer = viewer;
     planner.viewer = viewer;
-    planner.addCandidateDistance = 2.0;
     planner.bodyContactConstraints.push_back(generateBodyContactConstraint(planner.bodies, robot->link("LARM_JOINT7"), 0.02));
     planner.bodyContactConstraints.push_back(generateBodyContactConstraint(planner.bodies, robot->link("RARM_JOINT7"), 0.02));
     planner.bodyContactConstraints.push_back(generateBodyContactConstraint(planner.bodies, robot->link("LLEG_JOINT5"), 0.02));
