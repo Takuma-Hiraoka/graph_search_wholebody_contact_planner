@@ -12,6 +12,7 @@ namespace graph_search_wholebody_contact_planner{
       ATTACH_FIXED, // 離れている接触をつける.
     };
   std::vector<cnoid::SgNodePtr> generateCandidateMakers(const std::vector<cnoid::BodyPtr>& bodies, const std::vector<std::shared_ptr<ContactCandidate> >& ccs);
+  void generateCandidateVisualLink(const std::vector<cnoid::BodyPtr>& bodies, const cnoid::LinkPtr link, const std::vector<std::shared_ptr<ContactCandidate> >& ccs, const cnoid::Vector3f color=cnoid::Vector3f(0.0,1.0,0.0));
 }
 
 inline std::ostream &operator<<(std::ostream &os, const graph_search_wholebody_contact_planner::ContactState& state) {

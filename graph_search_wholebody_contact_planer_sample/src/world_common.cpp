@@ -235,7 +235,8 @@ namespace graph_search_wholebody_contact_planner_sample{
           material->setTransparency(0.5);
           shape->setMaterial(material);
           cnoid::SgPosTransformPtr posTransform = new cnoid::SgPosTransform();
-          posTransform->translation() = cnoid::Vector3(1.0,0.35,1.0);
+          // posTransform->translation() = cnoid::Vector3(1.0,0.35,1.0);
+          posTransform->translation() = cnoid::Vector3(1.0,0.45,1.0);
           posTransform->addChild(shape);
           rootLink->addShapeNode(posTransform);
         }
@@ -247,7 +248,7 @@ namespace graph_search_wholebody_contact_planner_sample{
           shape->setMaterial(material);
           cnoid::SgPosTransformPtr posTransform = new cnoid::SgPosTransform();
           // posTransform->translation() = cnoid::Vector3(1.0,-0.35,1.0);
-          posTransform->translation() = cnoid::Vector3(1.0,-0.4,1.0);
+          posTransform->translation() = cnoid::Vector3(1.0,-0.45,1.0);
           posTransform->addChild(shape);
           rootLink->addShapeNode(posTransform);
         }

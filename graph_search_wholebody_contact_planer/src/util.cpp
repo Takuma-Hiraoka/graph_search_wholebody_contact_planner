@@ -1,4 +1,5 @@
 #include <graph_search_wholebody_contact_planner/contact_graph.h>
+#include <cnoid/MeshGenerator>
 
 namespace graph_search_wholebody_contact_planner{
   std::vector<cnoid::SgNodePtr> generateCandidateMakers(const std::vector<cnoid::BodyPtr>& bodies, const std::vector<std::shared_ptr<ContactCandidate> >& ccs) {
@@ -15,14 +16,11 @@ namespace graph_search_wholebody_contact_planner{
       lines->addLine(0,1); lines->colorIndices().push_back(0); lines->colorIndices().push_back(0);
       lines->addLine(0,2); lines->colorIndices().push_back(1); lines->colorIndices().push_back(1);
       lines->addLine(0,3); lines->colorIndices().push_back(2); lines->colorIndices().push_back(2);
-      cnoid::Isometry3 pose;
-      if(ccs[i]->isStatic) pose = ccs[i]->localPose;
-      else {
-        for (int j=0; j<bodies.size(); j++) {
-          if (bodies[j]->name() != ccs[i]->bodyName) continue;
-          if(bodies[j]->joint(ccs[i]->linkName)) {
-            pose = bodies[j]->joint(ccs[i]->linkName)->T() * ccs[i]->localPose;
-          }
+      cnoid::Isometry3 pose = ccs[i]->localPose; // bodyを持たない場合
+      for (int j=0; j<bodies.size(); j++) {
+        if (bodies[j]->name() != ccs[i]->bodyName) continue;
+        if(bodies[j]->joint(ccs[i]->linkName)) {
+          pose = bodies[j]->joint(ccs[i]->linkName)->T() * ccs[i]->localPose;
         }
       }
       lines->getOrCreateVertices()->at(0) = pose.translation().cast<cnoid::Vector3f::Scalar>();
@@ -34,4 +32,25 @@ namespace graph_search_wholebody_contact_planner{
     return drawOnObjects;
   }
 
+  void generateCandidateVisualLink(const std::vector<cnoid::BodyPtr>& bodies, const cnoid::LinkPtr link, const std::vector<std::shared_ptr<ContactCandidate> >& ccs, const cnoid::Vector3f color) {
+    cnoid::MeshGenerator meshGenerator;
+    for(int i=0;i<ccs.size();i++) {
+      cnoid::SgShapePtr shape = new cnoid::SgShape();
+      shape->setMesh(meshGenerator.generateSphere(0.025));
+      cnoid::SgMaterialPtr material = new cnoid::SgMaterial();
+      material->setTransparency(0);
+      material->setDiffuseColor(color);
+      shape->setMaterial(material);
+      cnoid::Isometry3 pose = ccs[i]->localPose; // bodyを持たない場合
+      for (int j=0; j<bodies.size(); j++) {
+        if (bodies[j]->name() != ccs[i]->bodyName) continue;
+        if(bodies[j]->link(ccs[i]->linkName)) {
+          pose = bodies[j]->link(ccs[i]->linkName)->T() * ccs[i]->localPose;
+        }
+      }
+      cnoid::SgPosTransformPtr posTransform = new cnoid::SgPosTransform(pose);
+      posTransform->addChild(shape);
+      link->addShapeNode(posTransform);
+    }
+  }
 }

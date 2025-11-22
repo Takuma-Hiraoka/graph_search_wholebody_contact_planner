@@ -159,6 +159,16 @@ namespace graph_search_wholebody_contact_planner_sample{
     // drawOnObjects.insert(drawOnObjects.end(), csc.begin(), csc.end());
     // drawOnObjects.insert(drawOnObjects.end(), cdc.begin(), cdc.end());
 
+    std::vector<std::shared_ptr<graph_search_wholebody_contact_planner::ContactCandidate> > guidedCandidates;
+    locoPlanner.candidatesFromGuide(locoPlanner.bodies, locoPlanner.contactStaticCandidates, locoPlanner.guidePath, "JAXON", "LARM_JOINT7", guidedCandidates);
+    cnoid::BodyPtr ccMarkers = new cnoid::Body();
+    {
+      cnoid::LinkPtr rootLink = new cnoid::Link();
+      ccMarkers->setRootLink(rootLink);
+      graph_search_wholebody_contact_planner::generateCandidateVisualLink(locoPlanner.bodies, rootLink, guidedCandidates, cnoid::Vector3f(1.0, 0.0, 0.0));
+    }
+    viewer->objects(ccMarkers);
+
     viewer->drawOn(drawOnObjects);
     viewer->drawObjects();
 
@@ -177,6 +187,7 @@ namespace graph_search_wholebody_contact_planner_sample{
     locoPlanner.threads() = 20;
     locoPlanner.debugLevel() = 0;
     // locoPlanner.maxExtendNum() = 1000;
+
     locoPlanner.solve();
 
     std::vector<graph_search_wholebody_contact_planner::ContactState> gsGoPath;
