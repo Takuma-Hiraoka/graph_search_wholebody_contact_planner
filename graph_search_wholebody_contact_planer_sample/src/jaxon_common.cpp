@@ -108,6 +108,40 @@ namespace graph_search_wholebody_contact_planner_sample{
       }
     }
 
+    // searchRegionConstraints
+    {
+      // pitch < 90
+      std::shared_ptr<ik_constraint2::RegionConstraint> constraint = std::make_shared<ik_constraint2::RegionConstraint>();
+      constraint->A_link() = robot->rootLink();
+      constraint->A_localpos().translation() = cnoid::Vector3(0.0,0.0,-0.1);
+      constraint->B_link() = robot->rootLink();
+      constraint->eval_link() = nullptr;
+      constraint->weightR().setZero();
+      constraint->C().resize(1,3);
+      constraint->C().insert(0,2) = 1.0;
+      constraint->dl().resize(1);
+      constraint->dl()[0] = -1e10;
+      constraint->du().resize(1);
+      constraint->du()[0] = 0.0;
+      param->searchRegionConstraints.push_back(constraint);
+    }
+    {
+      // pitch > 0
+      std::shared_ptr<ik_constraint2::RegionConstraint> constraint = std::make_shared<ik_constraint2::RegionConstraint>();
+      constraint->A_link() = robot->rootLink();
+      constraint->A_localpos().translation() = cnoid::Vector3(0.1,0.0,0.0);
+      constraint->B_link() = robot->rootLink();
+      constraint->eval_link() = nullptr;
+      constraint->weightR().setZero();
+      constraint->C().resize(1,3);
+      constraint->C().insert(0,2) = 1.0;
+      constraint->dl().resize(1);
+      constraint->dl()[0] = -1e10;
+      constraint->du().resize(1);
+      constraint->du()[0] = 0.0;
+      param->searchRegionConstraints.push_back(constraint);
+    }
+
     // environmental collision
     for (int i=0; i<robot->numLinks(); i++) {
       {
@@ -240,6 +274,50 @@ namespace graph_search_wholebody_contact_planner_sample{
     constraint->debugLevel() = 0;
     constraint->updateBounds();
     return constraint;
+  }
+
+  void addLimbInfo(graph_search_wholebody_contact_planner::WholeBodyContactPlanner& planner, cnoid::BodyPtr robot) {
+    // rleg
+    {
+      std::shared_ptr<graph_search_wholebody_contact_planner::ContactCandidate> rleg = std::make_shared<graph_search_wholebody_contact_planner::ContactCandidate>();
+      rleg->bodyName = robot->name();
+      rleg->linkName = "RLEG_JOINT5";
+      rleg->isStatic = false;
+      rleg->localPose.translation() = cnoid::Vector3(0,0,-0.1);
+      planner.contactDynamicCandidates.push_back(rleg);
+    }
+    // lleg
+    {
+      std::shared_ptr<graph_search_wholebody_contact_planner::ContactCandidate> lleg = std::make_shared<graph_search_wholebody_contact_planner::ContactCandidate>();
+      lleg->bodyName = robot->name();
+      lleg->linkName = "LLEG_JOINT5";
+      lleg->isStatic = false;
+      lleg->localPose.translation() = cnoid::Vector3(0,0,-0.1);
+      planner.contactDynamicCandidates.push_back(lleg);
+    }
+    // rarm
+    {
+      std::shared_ptr<graph_search_wholebody_contact_planner::ContactCandidate> rarm = std::make_shared<graph_search_wholebody_contact_planner::ContactCandidate>();
+      rarm->bodyName = robot->name();
+      rarm->linkName = "RARM_JOINT7";
+      rarm->isStatic = false;
+      rarm->localPose.translation() = cnoid::Vector3(0,0,-0.22);
+      planner.contactDynamicCandidates.push_back(rarm);
+    }
+    // larm
+    {
+      std::shared_ptr<graph_search_wholebody_contact_planner::ContactCandidate> larm = std::make_shared<graph_search_wholebody_contact_planner::ContactCandidate>();
+      larm->bodyName = robot->name();
+      larm->linkName = "LARM_JOINT7";
+      larm->isStatic = false;
+      larm->localPose.translation() = cnoid::Vector3(0,0,-0.22);
+      planner.contactDynamicCandidates.push_back(larm);
+    }
+
+    planner.bodyContactConstraints.push_back(generateBodyContactConstraint(planner.bodies, robot->link("LARM_JOINT7"), 0.02));
+    planner.bodyContactConstraints.push_back(generateBodyContactConstraint(planner.bodies, robot->link("RARM_JOINT7"), 0.02));
+    planner.bodyContactConstraints.push_back(generateBodyContactConstraint(planner.bodies, robot->link("LLEG_JOINT5"), 0.02));
+    planner.bodyContactConstraints.push_back(generateBodyContactConstraint(planner.bodies, robot->link("RLEG_JOINT5"), 0.02));
   }
 
 }

@@ -18,5 +18,6 @@
   <depend>ik_constraint2_bullet</depend>
   <depend>ik_constraint2_body_contact</depend>
   <depend>c-wcp</depend>
+  <depend>choreonoid_contact_candidate_generator</depend>
 
 </package>

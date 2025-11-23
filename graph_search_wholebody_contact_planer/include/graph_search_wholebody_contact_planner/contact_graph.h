@@ -26,7 +26,6 @@ namespace graph_search_wholebody_contact_planner{
     prioritized_inverse_kinematics_solver2::IKParam pikParam;
     global_inverse_kinematics_solver::GIKParam gikParam;
     std::shared_ptr<moveit_extensions::InterpolatedPropagationDistanceField> field;
-    std::shared_ptr<choreonoid_viewer::Viewer> viewer = nullptr;
     double addCandidateDistance = 2.0; // contactDynamicCandidateのルートリンクからこの距離を超えるものはgikを使うまでもなく解けないものとする
 
     WholeBodyContactPlanner() {

@@ -20,40 +20,6 @@ namespace graph_search_wholebody_contact_planner_sample{
 
     std::vector<double> initialPose;
     global_inverse_kinematics_solver::link2Frame(param->variables, initialPose);
-    // searchRegionConstraints
-    {
-      // pitch < 90
-      std::shared_ptr<ik_constraint2::RegionConstraint> constraint = std::make_shared<ik_constraint2::RegionConstraint>();
-      constraint->A_link() = robot->rootLink();
-      constraint->A_localpos().translation() = cnoid::Vector3(0.0,0.0,-0.1);
-      constraint->B_link() = robot->rootLink();
-      constraint->eval_link() = nullptr;
-      constraint->weightR().setZero();
-      constraint->C().resize(1,3);
-      constraint->C().insert(0,2) = 1.0;
-      constraint->dl().resize(1);
-      constraint->dl()[0] = -1e10;
-      constraint->du().resize(1);
-      constraint->du()[0] = 0.0;
-      param->searchRegionConstraints.push_back(constraint);
-    }
-    {
-      // pitch > 0
-      std::shared_ptr<ik_constraint2::RegionConstraint> constraint = std::make_shared<ik_constraint2::RegionConstraint>();
-      constraint->A_link() = robot->rootLink();
-      constraint->A_localpos().translation() = cnoid::Vector3(0.1,0.0,0.0);
-      constraint->B_link() = robot->rootLink();
-      constraint->eval_link() = nullptr;
-      constraint->weightR().setZero();
-      constraint->C().resize(1,3);
-      constraint->C().insert(0,2) = 1.0;
-      constraint->dl().resize(1);
-      constraint->dl()[0] = -1e10;
-      constraint->du().resize(1);
-      constraint->du()[0] = 0.0;
-      param->searchRegionConstraints.push_back(constraint);
-    }
-
     // goal
     {
       std::shared_ptr<ik_constraint2::PositionConstraint> constraint = std::make_shared<ik_constraint2::PositionConstraint>();
@@ -87,7 +53,6 @@ namespace graph_search_wholebody_contact_planner_sample{
     if(!cwcp::solveCWCP(param, cwcpPath)) std::cerr << "solveCWCP failed" << std::endl;
     std::vector<std::pair<std::vector<double>, std::vector<std::shared_ptr<cwcp::Contact> > > > keyPosePath;
     if(!cwcp::generateKeyPose(param, cwcpPath, keyPosePath)) std::cerr << "generateKeyPose failed" << std::endl;
-    //    keyPosePath = cwcpPath;
 
     global_inverse_kinematics_solver::frame2Link(initialPose, param->variables);
 
@@ -97,67 +62,19 @@ namespace graph_search_wholebody_contact_planner_sample{
     // planner.rejections
     std::vector<choreonoid_contact_candidate_generator::ContactCandidate> csc_;
     choreonoid_contact_candidate_generator::generateCC(obstacle, csc_, 0.1);
-    for (int i=0; i<csc_.size(); i++) {
-      std::shared_ptr<graph_search_wholebody_contact_planner::ContactCandidate> cc = std::make_shared<graph_search_wholebody_contact_planner::ContactCandidate>();
-      cc->bodyName = csc_[i].body_name;
-      cc->linkName = csc_[i].link_name;
-      cc->localPose.translation() = csc_[i].p.cast<double>();
-      cc->localPose.linear() = csc_[i].R.cast<double>();
-      cc->isStatic = true;
-      locoPlanner.contactStaticCandidates.push_back(cc);
-    }
+    std::vector<std::shared_ptr<graph_search_wholebody_contact_planner::ContactCandidate> > environmentContacts;
+    graph_search_wholebody_contact_planner::convertContactCandidates(csc_, environmentContacts, true);
 
-    std::vector<choreonoid_contact_candidate_generator::ContactCandidate> cdc_;
-    choreonoid_contact_candidate_generator::generateCC(cube, cdc_, 0.1);
-    for (int i=0; i<cdc_.size(); i++) {
-      std::shared_ptr<graph_search_wholebody_contact_planner::ContactCandidate> cc = std::make_shared<graph_search_wholebody_contact_planner::ContactCandidate>();
-      cc->bodyName = cdc_[i].body_name;
-      cc->linkName = cdc_[i].link_name;
-      cc->localPose.translation() = cdc_[i].p.cast<double>();
-      cc->localPose.linear() = cdc_[i].R.cast<double>();
-      cc->isStatic = true;
-      locoPlanner.contactStaticCandidates.push_back(cc);
-    }
-    {
-      std::shared_ptr<graph_search_wholebody_contact_planner::ContactCandidate> rleg = std::make_shared<graph_search_wholebody_contact_planner::ContactCandidate>();
-      rleg->bodyName = robot->name();
-      rleg->linkName = "RLEG_JOINT5";
-      rleg->isStatic = false;
-      rleg->localPose.translation() = cnoid::Vector3(0,0,-0.1);
-      locoPlanner.contactDynamicCandidates.push_back(rleg);
-    }
-    // lleg
-    {
-      std::shared_ptr<graph_search_wholebody_contact_planner::ContactCandidate> lleg = std::make_shared<graph_search_wholebody_contact_planner::ContactCandidate>();
-      lleg->bodyName = robot->name();
-      lleg->linkName = "LLEG_JOINT5";
-      lleg->isStatic = false;
-      lleg->localPose.translation() = cnoid::Vector3(0,0,-0.1);
-      locoPlanner.contactDynamicCandidates.push_back(lleg);
-    }
-    // rarm
-    {
-      std::shared_ptr<graph_search_wholebody_contact_planner::ContactCandidate> rarm = std::make_shared<graph_search_wholebody_contact_planner::ContactCandidate>();
-      rarm->bodyName = robot->name();
-      rarm->linkName = "RARM_JOINT7";
-      rarm->isStatic = false;
-      rarm->localPose.translation() = cnoid::Vector3(0,0,-0.22);
-      locoPlanner.contactDynamicCandidates.push_back(rarm);
-    }
-    // larm
-    {
-      std::shared_ptr<graph_search_wholebody_contact_planner::ContactCandidate> larm = std::make_shared<graph_search_wholebody_contact_planner::ContactCandidate>();
-      larm->bodyName = robot->name();
-      larm->linkName = "LARM_JOINT7";
-      larm->isStatic = false;
-      larm->localPose.translation() = cnoid::Vector3(0,0,-0.22);
-      locoPlanner.contactDynamicCandidates.push_back(larm);
-    }
+    std::vector<choreonoid_contact_candidate_generator::ContactCandidate> cube_;
+    choreonoid_contact_candidate_generator::generateCC(cube, cube_, 0.1);
+    std::vector<std::shared_ptr<graph_search_wholebody_contact_planner::ContactCandidate> > cubeContacts;
+    graph_search_wholebody_contact_planner::convertContactCandidates(cube_, cubeContacts, true);
+    locoPlanner.contactStaticCandidates.insert(locoPlanner.contactStaticCandidates.end(), environmentContacts.begin(), environmentContacts.end());
+    locoPlanner.contactStaticCandidates.insert(locoPlanner.contactStaticCandidates.end(), cubeContacts.begin(), cubeContacts.end());
+
+    addLimbInfo(locoPlanner, robot);
+
     std::vector<cnoid::SgNodePtr> drawOnObjects;
-    // std::vector<cnoid::SgNodePtr> csc = graph_search_wholebody_contact_planner::generateCandidateMakers(locoPlanner.bodies, locoPlanner.contactStaticCandidates);
-    // std::vector<cnoid::SgNodePtr> cdc = graph_search_wholebody_contact_planner::generateCandidateMakers(locoPlanner.bodies, locoPlanner.contactDynamicCandidates);
-    // drawOnObjects.insert(drawOnObjects.end(), csc.begin(), csc.end());
-    // drawOnObjects.insert(drawOnObjects.end(), cdc.begin(), cdc.end());
 
     std::vector<std::shared_ptr<graph_search_wholebody_contact_planner::ContactCandidate> > larmGuidedCandidates;
     locoPlanner.candidatesFromGuide(locoPlanner.bodies, locoPlanner.contactStaticCandidates, locoPlanner.guidePath, "JAXON", "LARM_JOINT7", larmGuidedCandidates);
@@ -184,14 +101,8 @@ namespace graph_search_wholebody_contact_planner_sample{
     // locoPlanner.pikParam.debugLevel = 3;
     // locoPlanner.pikParam.viewMilliseconds = -1;
     // locoPlanner.pikParam.viewer = viewer;
-    locoPlanner.viewer = viewer;
-    locoPlanner.bodyContactConstraints.push_back(generateBodyContactConstraint(locoPlanner.bodies, robot->link("LARM_JOINT7"), 0.02));
-    locoPlanner.bodyContactConstraints.push_back(generateBodyContactConstraint(locoPlanner.bodies, robot->link("RARM_JOINT7"), 0.02));
-    locoPlanner.bodyContactConstraints.push_back(generateBodyContactConstraint(locoPlanner.bodies, robot->link("LLEG_JOINT5"), 0.02));
-    locoPlanner.bodyContactConstraints.push_back(generateBodyContactConstraint(locoPlanner.bodies, robot->link("RLEG_JOINT5"), 0.02));
 
     locoPlanner.addCandidateDistance = 1.5;
-    locoPlanner.addNearGuideCandidateDistance = 0.2;
     locoPlanner.currentContactState->transition.push_back(locoPlanner.currentContactState->frame);
     locoPlanner.threads() = 20;
     locoPlanner.debugLevel() = 0;

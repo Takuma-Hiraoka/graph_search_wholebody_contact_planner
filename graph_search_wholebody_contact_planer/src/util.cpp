@@ -2,7 +2,20 @@
 #include <cnoid/MeshGenerator>
 
 namespace graph_search_wholebody_contact_planner{
-  std::vector<cnoid::SgNodePtr> generateCandidateMakers(const std::vector<cnoid::BodyPtr>& bodies, const std::vector<std::shared_ptr<ContactCandidate> >& ccs) {
+  void convertContactCandidates(const std::vector<choreonoid_contact_candidate_generator::ContactCandidate>& in, std::vector<std::shared_ptr<ContactCandidate> >& out, bool isStatic) {
+    out.clear();
+    for (int i=0; i<in.size(); i++) {
+      std::shared_ptr<graph_search_wholebody_contact_planner::ContactCandidate> cc = std::make_shared<graph_search_wholebody_contact_planner::ContactCandidate>();
+      cc->bodyName = in[i].body_name;
+      cc->linkName = in[i].link_name;
+      cc->localPose.translation() = in[i].p.cast<double>();
+      cc->localPose.linear() = in[i].R.cast<double>();
+      cc->isStatic = isStatic;
+      out.push_back(cc);
+    }
+  }
+
+  std::vector<cnoid::SgNodePtr> generateCandidateMarkers(const std::vector<cnoid::BodyPtr>& bodies, const std::vector<std::shared_ptr<ContactCandidate> >& ccs) {
     std::vector<cnoid::SgNodePtr> drawOnObjects;
     for(int i=0;i<ccs.size();i++) {
       cnoid::SgLineSetPtr lines = new cnoid::SgLineSet;

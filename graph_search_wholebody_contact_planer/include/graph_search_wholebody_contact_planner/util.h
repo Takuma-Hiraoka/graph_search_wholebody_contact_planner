@@ -3,6 +3,7 @@
 #include <global_inverse_kinematics_solver/global_inverse_kinematics_solver.h>
 #include <prioritized_inverse_kinematics_solver2/prioritized_inverse_kinematics_solver2.h>
 #include <graph_search_wholebody_contact_planner/contact_state.h>
+#include <choreonoid_contact_candidate_generator/choreonoid_contact_candidate_generator.h>
 
 namespace graph_search_wholebody_contact_planner{
   enum class IKState
@@ -11,7 +12,8 @@ namespace graph_search_wholebody_contact_planner{
       ATTACH_PRE, // 触れる直前にまで近づける.
       ATTACH_FIXED, // 離れている接触をつける.
     };
-  std::vector<cnoid::SgNodePtr> generateCandidateMakers(const std::vector<cnoid::BodyPtr>& bodies, const std::vector<std::shared_ptr<ContactCandidate> >& ccs);
+  void convertContactCandidates(const std::vector<choreonoid_contact_candidate_generator::ContactCandidate>& in, std::vector<std::shared_ptr<ContactCandidate> >& out, bool isStatic);
+  std::vector<cnoid::SgNodePtr> generateCandidateMarkers(const std::vector<cnoid::BodyPtr>& bodies, const std::vector<std::shared_ptr<ContactCandidate> >& ccs);
   void generateCandidateVisualLink(const std::vector<cnoid::BodyPtr>& bodies, const cnoid::LinkPtr link, const std::vector<std::shared_ptr<ContactCandidate> >& ccs, const cnoid::Vector3f color=cnoid::Vector3f(0.0,1.0,0.0));
 }
 

@@ -29,12 +29,12 @@ namespace graph_search_wholebody_contact_planner_sample{
       {
         lWall->setName("lWall");
         cnoid::SgShapePtr shape = new cnoid::SgShape();
-        shape->setMesh(meshGenerator.generateBox(cnoid::Vector3(1,0.1,1.75)));
+        shape->setMesh(meshGenerator.generateBox(cnoid::Vector3(1,0.2,1.75)));
         cnoid::SgMaterialPtr material = new cnoid::SgMaterial();
         material->setTransparency(0);
         shape->setMaterial(material);
         cnoid::SgPosTransformPtr posTransform = new cnoid::SgPosTransform();
-        posTransform->translation() = cnoid::Vector3(0.5,0.6,0.9);
+        posTransform->translation() = cnoid::Vector3(0.5,0.65,0.9);
         posTransform->addChild(shape);
         lWall->addShapeNode(posTransform);
         rootLink->appendChild(lWall);
@@ -43,12 +43,12 @@ namespace graph_search_wholebody_contact_planner_sample{
       {
         rWall->setName("rWall");
         cnoid::SgShapePtr shape = new cnoid::SgShape();
-        shape->setMesh(meshGenerator.generateBox(cnoid::Vector3(1,0.1,1.75)));
+        shape->setMesh(meshGenerator.generateBox(cnoid::Vector3(1,0.2,1.75)));
         cnoid::SgMaterialPtr material = new cnoid::SgMaterial();
         material->setTransparency(0);
         shape->setMaterial(material);
         cnoid::SgPosTransformPtr posTransform = new cnoid::SgPosTransform();
-        posTransform->translation() = cnoid::Vector3(0.5,-0.6,0.9);
+        posTransform->translation() = cnoid::Vector3(0.5,-0.65,0.9);
         posTransform->addChild(shape);
         rWall->addShapeNode(posTransform);
         rootLink->appendChild(rWall);
