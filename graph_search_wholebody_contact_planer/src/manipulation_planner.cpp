@@ -349,28 +349,20 @@ namespace graph_search_wholebody_contact_planner{
       for (int i=0; i<contactCheckParam->preState.contacts.size(); i++) {
         if (contactCheckParam->preState.contacts[i] == moveContact) continue;
         std::shared_ptr<ik_constraint2::PositionConstraint> constraint = std::make_shared<ik_constraint2::PositionConstraint>();
-        if (contactCheckParam->preState.contacts[i].c1.isStatic) { constraint->A_link() = nullptr; }
-        else {
-          for (int b=0; b<contactCheckParam->bodies.size(); b++) {
-            if (contactCheckParam->bodies[b]->name() != contactCheckParam->preState.contacts[i].c1.bodyName) continue;
-            if (contactCheckParam->bodies[b]->joint(contactCheckParam->preState.contacts[i].c1.linkName)) {
-              constraint->A_link() = contactCheckParam->bodies[b]->joint(contactCheckParam->preState.contacts[i].c1.linkName);
-              break;
-            }
+        for (int b=0; b<contactCheckParam->bodies.size(); b++) {
+          if (contactCheckParam->bodies[b]->name() != contactCheckParam->preState.contacts[i].c1.bodyName) continue;
+          if (contactCheckParam->bodies[b]->joint(contactCheckParam->preState.contacts[i].c1.linkName)) {
+            constraint->A_link() = contactCheckParam->bodies[b]->joint(contactCheckParam->preState.contacts[i].c1.linkName);
+            break;
           }
-          if (!constraint->A_link()) std::cerr << "[GraphSearchContactPlanner] error!! bodies do not have preState.contacts[i].c1.linkName" << std::endl;
         }
         constraint->A_localpos() = contactCheckParam->preState.contacts[i].c1.localPose;
-        if (contactCheckParam->preState.contacts[i].c2.isStatic) { constraint->B_link() = nullptr; }
-        else {
-          for (int b=0; b<contactCheckParam->bodies.size(); b++) {
-            if (contactCheckParam->bodies[b]->name() != contactCheckParam->preState.contacts[i].c2.bodyName) continue;
-            if (contactCheckParam->bodies[b]->joint(contactCheckParam->preState.contacts[i].c2.linkName)) {
-              constraint->B_link() = contactCheckParam->bodies[b]->joint(contactCheckParam->preState.contacts[i].c2.linkName);
-              break;
-            }
+        for (int b=0; b<contactCheckParam->bodies.size(); b++) {
+          if (contactCheckParam->bodies[b]->name() != contactCheckParam->preState.contacts[i].c2.bodyName) continue;
+          if (contactCheckParam->bodies[b]->joint(contactCheckParam->preState.contacts[i].c2.linkName)) {
+            constraint->B_link() = contactCheckParam->bodies[b]->joint(contactCheckParam->preState.contacts[i].c2.linkName);
+            break;
           }
-          if (!constraint->B_link()) std::cerr << "[GraphSearchContactPlanner] error!! bodies do not have preState.contacts[i].c2.linkName" << std::endl;
         }
         constraint->B_localpos() = contactCheckParam->preState.contacts[i].c2.localPose;
         constraint->B_localpos().linear() = constraint->B_localpos().linear() * cnoid::rotFromRpy(0.0, M_PI, M_PI/2).transpose(); // scfrを作る関係上localposのZはrobotの内側を向いている. PositionConstraintで一致させるためにZの向きを揃える.
@@ -400,6 +392,9 @@ namespace graph_search_wholebody_contact_planner{
             if (contactCheckParam->preState.contacts[i].c2.isStatic) {
               scfrConstraints[j]->links().push_back(nullptr);
               cnoid::Isometry3 pose = contactCheckParam->preState.contacts[i].c2.localPose;
+              for (int b=0; b < contactCheckParam->bodies.size(); b++) {
+                if ((contactCheckParam->bodies[b]->name() != contactCheckParam->preState.contacts[i].c2.bodyName) && contactCheckParam->bodies[b]->link(contactCheckParam->preState.contacts[i].c2.linkName)) pose = contactCheckParam->bodies[b]->link(contactCheckParam->preState.contacts[i].c2.linkName)->T() * contactCheckParam->preState.contacts[i].c2.localPose;
+              }
               pose.linear() *= cnoid::rotFromRpy(0.0, M_PI, M_PI/2).transpose();
               scfrConstraints[j]->poses().push_back(pose);
             } else {
@@ -416,6 +411,9 @@ namespace graph_search_wholebody_contact_planner{
             if (contactCheckParam->preState.contacts[i].c1.isStatic) {
               scfrConstraints[j]->links().push_back(nullptr);
               cnoid::Isometry3 pose = contactCheckParam->preState.contacts[i].c1.localPose;
+              for (int b=0; b < contactCheckParam->bodies.size(); b++) {
+                if ((contactCheckParam->bodies[b]->name() != contactCheckParam->preState.contacts[i].c1.bodyName) && contactCheckParam->bodies[b]->link(contactCheckParam->preState.contacts[i].c1.linkName)) pose = contactCheckParam->bodies[b]->link(contactCheckParam->preState.contacts[i].c1.linkName)->T() * contactCheckParam->preState.contacts[i].c1.localPose;
+              }
               pose.linear() *= cnoid::rotFromRpy(0.0, M_PI, M_PI/2).transpose();
               scfrConstraints[j]->poses().push_back(pose);
             } else {
@@ -433,28 +431,20 @@ namespace graph_search_wholebody_contact_planner{
     }
 
     std::shared_ptr<ik_constraint2_body_contact::BodyContactConstraint> moveContactConstraint = std::make_shared<ik_constraint2_body_contact::BodyContactConstraint>();
-    if (moveContact.c1.isStatic) { moveContactConstraint->A_link() = nullptr; }
-    else {
-      for (int b=0; b<contactCheckParam->bodies.size(); b++) {
-        if (contactCheckParam->bodies[b]->name() != moveContact.c1.bodyName) continue;
-        if (contactCheckParam->bodies[b]->joint(moveContact.c1.linkName)) {
-          moveContactConstraint->A_link() = contactCheckParam->bodies[b]->joint(moveContact.c1.linkName);
-          break;
-        }
+    for (int b=0; b<contactCheckParam->bodies.size(); b++) {
+      if (contactCheckParam->bodies[b]->name() != moveContact.c1.bodyName) continue;
+      if (contactCheckParam->bodies[b]->joint(moveContact.c1.linkName)) {
+        moveContactConstraint->A_link() = contactCheckParam->bodies[b]->joint(moveContact.c1.linkName);
+        break;
       }
-      if (!moveContactConstraint->A_link()) std::cerr << "[GraphSearchContactPlanner] error!! bodies do not have postState.contacts[i].c1.linkName" << std::endl;
     }
     moveContactConstraint->A_localpos() = moveContact.c1.localPose;
-    if (moveContact.c2.isStatic) { moveContactConstraint->B_link() = nullptr; }
-    else {
-      for (int b=0; b<contactCheckParam->bodies.size(); b++) {
-        if (contactCheckParam->bodies[b]->name() != moveContact.c2.bodyName) continue;
-        if (contactCheckParam->bodies[b]->joint(moveContact.c2.linkName)) {
-          moveContactConstraint->B_link() = contactCheckParam->bodies[b]->joint(moveContact.c2.linkName);
-          break;
-        }
+    for (int b=0; b<contactCheckParam->bodies.size(); b++) {
+      if (contactCheckParam->bodies[b]->name() != moveContact.c2.bodyName) continue;
+      if (contactCheckParam->bodies[b]->joint(moveContact.c2.linkName)) {
+        moveContactConstraint->B_link() = contactCheckParam->bodies[b]->joint(moveContact.c2.linkName);
+        break;
       }
-      if (!moveContactConstraint->B_link()) std::cerr << "[GraphSearchContactPlanner] error!! bodies do not have postState.contacts[i].c2.linkName" << std::endl;
     }
     moveContactConstraint->B_localpos() = moveContact.c2.localPose;
     moveContactConstraint->B_localpos().linear() = moveContactConstraint->B_localpos().linear() * cnoid::rotFromRpy(0.0, M_PI, M_PI/2).transpose(); // scfrを作る関係上localposのZはrobotの内側を向いている. PositionConstraintで一致させるために回転だけ逆にする.

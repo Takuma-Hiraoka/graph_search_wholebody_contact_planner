@@ -159,13 +159,22 @@ namespace graph_search_wholebody_contact_planner_sample{
     // drawOnObjects.insert(drawOnObjects.end(), csc.begin(), csc.end());
     // drawOnObjects.insert(drawOnObjects.end(), cdc.begin(), cdc.end());
 
-    std::vector<std::shared_ptr<graph_search_wholebody_contact_planner::ContactCandidate> > guidedCandidates;
-    locoPlanner.candidatesFromGuide(locoPlanner.bodies, locoPlanner.contactStaticCandidates, locoPlanner.guidePath, "JAXON", "LARM_JOINT7", guidedCandidates);
+    std::vector<std::shared_ptr<graph_search_wholebody_contact_planner::ContactCandidate> > larmGuidedCandidates;
+    locoPlanner.candidatesFromGuide(locoPlanner.bodies, locoPlanner.contactStaticCandidates, locoPlanner.guidePath, "JAXON", "LARM_JOINT7", larmGuidedCandidates);
+    std::vector<std::shared_ptr<graph_search_wholebody_contact_planner::ContactCandidate> > rarmGuidedCandidates;
+    locoPlanner.candidatesFromGuide(locoPlanner.bodies, locoPlanner.contactStaticCandidates, locoPlanner.guidePath, "JAXON", "RARM_JOINT7", rarmGuidedCandidates);
+    std::vector<std::shared_ptr<graph_search_wholebody_contact_planner::ContactCandidate> > llegGuidedCandidates;
+    locoPlanner.candidatesFromGuide(locoPlanner.bodies, locoPlanner.contactStaticCandidates, locoPlanner.guidePath, "JAXON", "LLEG_JOINT5", llegGuidedCandidates);
+    std::vector<std::shared_ptr<graph_search_wholebody_contact_planner::ContactCandidate> > rlegGuidedCandidates;
+    locoPlanner.candidatesFromGuide(locoPlanner.bodies, locoPlanner.contactStaticCandidates, locoPlanner.guidePath, "JAXON", "RLEG_JOINT5", rlegGuidedCandidates);
     cnoid::BodyPtr ccMarkers = new cnoid::Body();
     {
       cnoid::LinkPtr rootLink = new cnoid::Link();
       ccMarkers->setRootLink(rootLink);
-      graph_search_wholebody_contact_planner::generateCandidateVisualLink(locoPlanner.bodies, rootLink, guidedCandidates, cnoid::Vector3f(1.0, 0.0, 0.0));
+      graph_search_wholebody_contact_planner::generateCandidateVisualLink(locoPlanner.bodies, rootLink, larmGuidedCandidates, cnoid::Vector3f(1.0, 0.0, 0.0));
+      graph_search_wholebody_contact_planner::generateCandidateVisualLink(locoPlanner.bodies, rootLink, rarmGuidedCandidates, cnoid::Vector3f(0.0, 0.0, 1.0));
+      graph_search_wholebody_contact_planner::generateCandidateVisualLink(locoPlanner.bodies, rootLink, llegGuidedCandidates, cnoid::Vector3f(0.5, 0.5, 0.0));
+      graph_search_wholebody_contact_planner::generateCandidateVisualLink(locoPlanner.bodies, rootLink, rlegGuidedCandidates, cnoid::Vector3f(0.0, 0.5, 0.5));
     }
     viewer->objects(ccMarkers);
 
@@ -181,7 +190,7 @@ namespace graph_search_wholebody_contact_planner_sample{
     locoPlanner.bodyContactConstraints.push_back(generateBodyContactConstraint(locoPlanner.bodies, robot->link("LLEG_JOINT5"), 0.02));
     locoPlanner.bodyContactConstraints.push_back(generateBodyContactConstraint(locoPlanner.bodies, robot->link("RLEG_JOINT5"), 0.02));
 
-    locoPlanner.addCandidateDistance = 1.2;
+    locoPlanner.addCandidateDistance = 1.5;
     locoPlanner.addNearGuideCandidateDistance = 0.2;
     locoPlanner.currentContactState->transition.push_back(locoPlanner.currentContactState->frame);
     locoPlanner.threads() = 20;
