@@ -26,7 +26,7 @@ namespace graph_search_wholebody_contact_planner_sample{
       constraint->A_link() = robot->rootLink();
       constraint->B_localpos() = cube->rootLink()->T();
       constraint->weight() << 1.0, 1.0, 1.0, 0.0, 0.0, 0.0;
-      constraint->precision() = 0.7;
+      constraint->precision() = 0.4;
       param->goals.push_back(constraint);
     }
 
@@ -61,7 +61,7 @@ namespace graph_search_wholebody_contact_planner_sample{
     global_inverse_kinematics_solver::link2Frame(locoPlanner.variables, locoPlanner.currentContactState->frame);
     // planner.rejections
     std::vector<choreonoid_contact_candidate_generator::ContactCandidate> csc_;
-    choreonoid_contact_candidate_generator::generateCC(obstacle, csc_, 0.1);
+    choreonoid_contact_candidate_generator::generateCC(obstacle, csc_, 0.2);
     std::vector<std::shared_ptr<graph_search_wholebody_contact_planner::ContactCandidate> > environmentContacts;
     graph_search_wholebody_contact_planner::convertContactCandidates(csc_, environmentContacts, true);
 
@@ -74,8 +74,6 @@ namespace graph_search_wholebody_contact_planner_sample{
 
     addLimbInfo(locoPlanner, robot);
 
-    std::vector<cnoid::SgNodePtr> drawOnObjects;
-
     std::vector<std::shared_ptr<graph_search_wholebody_contact_planner::ContactCandidate> > larmGuidedCandidates;
     locoPlanner.candidatesFromGuide(locoPlanner.bodies, locoPlanner.contactStaticCandidates, locoPlanner.guidePath, "JAXON", "LARM_JOINT7", larmGuidedCandidates);
     std::vector<std::shared_ptr<graph_search_wholebody_contact_planner::ContactCandidate> > rarmGuidedCandidates;
@@ -84,18 +82,22 @@ namespace graph_search_wholebody_contact_planner_sample{
     locoPlanner.candidatesFromGuide(locoPlanner.bodies, locoPlanner.contactStaticCandidates, locoPlanner.guidePath, "JAXON", "LLEG_JOINT5", llegGuidedCandidates);
     std::vector<std::shared_ptr<graph_search_wholebody_contact_planner::ContactCandidate> > rlegGuidedCandidates;
     locoPlanner.candidatesFromGuide(locoPlanner.bodies, locoPlanner.contactStaticCandidates, locoPlanner.guidePath, "JAXON", "RLEG_JOINT5", rlegGuidedCandidates);
-    cnoid::BodyPtr ccMarkers = new cnoid::Body();
-    {
-      cnoid::LinkPtr rootLink = new cnoid::Link();
-      ccMarkers->setRootLink(rootLink);
-      graph_search_wholebody_contact_planner::generateCandidateVisualLink(locoPlanner.bodies, rootLink, larmGuidedCandidates, cnoid::Vector3f(1.0, 0.0, 0.0));
-      graph_search_wholebody_contact_planner::generateCandidateVisualLink(locoPlanner.bodies, rootLink, rarmGuidedCandidates, cnoid::Vector3f(0.0, 0.0, 1.0));
-      graph_search_wholebody_contact_planner::generateCandidateVisualLink(locoPlanner.bodies, rootLink, llegGuidedCandidates, cnoid::Vector3f(0.5, 0.5, 0.0));
-      graph_search_wholebody_contact_planner::generateCandidateVisualLink(locoPlanner.bodies, rootLink, rlegGuidedCandidates, cnoid::Vector3f(0.0, 0.5, 0.5));
-    }
-    viewer->objects(ccMarkers);
 
-    viewer->drawOn(drawOnObjects);
+    {
+      std::vector<cnoid::SgNodePtr> drawOnObjects;
+      cnoid::BodyPtr ccMarkers = new cnoid::Body();
+      {
+        cnoid::LinkPtr rootLink = new cnoid::Link();
+        ccMarkers->setRootLink(rootLink);
+        graph_search_wholebody_contact_planner::generateCandidateVisualLink(locoPlanner.bodies, rootLink, larmGuidedCandidates, cnoid::Vector3f(1.0, 0.0, 0.0));
+        graph_search_wholebody_contact_planner::generateCandidateVisualLink(locoPlanner.bodies, rootLink, rarmGuidedCandidates, cnoid::Vector3f(0.0, 0.0, 1.0));
+        graph_search_wholebody_contact_planner::generateCandidateVisualLink(locoPlanner.bodies, rootLink, llegGuidedCandidates, cnoid::Vector3f(0.5, 0.5, 0.0));
+        graph_search_wholebody_contact_planner::generateCandidateVisualLink(locoPlanner.bodies, rootLink, rlegGuidedCandidates, cnoid::Vector3f(0.0, 0.5, 0.5));
+      }
+      drawOnObjects.push_back(ccMarkers->rootLink()->visualShape());
+      viewer->drawOn(drawOnObjects);
+    }
+
     viewer->drawObjects();
 
     // locoPlanner.pikParam.debugLevel = 3;
@@ -103,8 +105,7 @@ namespace graph_search_wholebody_contact_planner_sample{
     // locoPlanner.pikParam.viewer = viewer;
 
     locoPlanner.addCandidateDistance = 1.5;
-    locoPlanner.currentContactState->transition.push_back(locoPlanner.currentContactState->frame);
-    locoPlanner.threads() = 20;
+    locoPlanner.threads() = 10;
     locoPlanner.debugLevel() = 0;
     // locoPlanner.maxExtendNum() = 1000;
 
@@ -113,7 +114,105 @@ namespace graph_search_wholebody_contact_planner_sample{
     std::vector<graph_search_wholebody_contact_planner::ContactState> gsGoPath;
     locoPlanner.goalPath(gsGoPath);
 
-    graph_search_wholebody_contact_planner::WholeBodyManipulationContactPlanner ManipPlanner;
+    std::cerr << "Go to cube OK" << std::endl;
+    global_inverse_kinematics_solver::frame2Link(gsGoPath.back().frame, locoPlanner.variables);
+    for(int b=0; b<param->bodies.size(); b++) {
+      param->bodies[b]->calcForwardKinematics(false);
+      param->bodies[b]->calcCenterOfMass();
+    }
+
+    // detach
+    graph_search_wholebody_contact_planner::WholeBodyManipulationContactPlanner manipPlanner;
+    manipPlanner.bodies = locoPlanner.bodies;
+    manipPlanner.variables = locoPlanner.variables;
+    manipPlanner.constraints = locoPlanner.constraints;
+    manipPlanner.rejections = locoPlanner.rejections;
+    manipPlanner.nominals = locoPlanner.nominals;
+    cube->rootLink()->setJointType(cnoid::Link::JointType::FreeJoint);
+    manipPlanner.variables.push_back(cube->rootLink());
+    manipPlanner.threads() = locoPlanner.threads();
+    manipPlanner.addCandidateDistance = 1.2;
+    manipPlanner.debugLevel() = 0;
+    manipPlanner.currentContactState = std::make_shared<graph_search_wholebody_contact_planner::ContactState>(gsGoPath.back());
+    for (int i=0; i<manipPlanner.currentContactState->contacts.size(); i++) {
+      if (manipPlanner.currentContactState->contacts[i].c1.bodyName == cube->name() && manipPlanner.currentContactState->contacts[i].c1.linkName == "cube") manipPlanner.currentContactState->contacts[i].c1.isStatic = false;
+      if (manipPlanner.currentContactState->contacts[i].c2.bodyName == cube->name() && manipPlanner.currentContactState->contacts[i].c2.linkName == "cube") manipPlanner.currentContactState->contacts[i].c2.isStatic = false;
+    }
+    {
+      graph_search_wholebody_contact_planner::ContactCandidate c1;
+      c1.bodyName = cube->name();
+      c1.linkName = "cube";
+      c1.isStatic = false;
+      c1.localPose.translation() = cnoid::Vector3(0, 0, -0.2);
+      c1.localPose.linear() = cnoid::rotFromRpy(0.0, 0.0, 0.0);
+      graph_search_wholebody_contact_planner::ContactCandidate c2;
+      c2.bodyName = "floor";
+      c2.linkName = "table2";
+      c2.isStatic = true;
+      c2.localPose.translation() = cnoid::Vector3(0.7, 0.0, 1.0);
+      c2.localPose.linear() = cnoid::rotFromRpy(0.0, M_PI, M_PI/2);
+      manipPlanner.currentContactState->contacts.push_back(graph_search_wholebody_contact_planner::Contact(c1,c2));
+    }
+    global_inverse_kinematics_solver::link2Frame(manipPlanner.variables, manipPlanner.currentContactState->frame);
+    // manipPlanner.contactStaticCandidates.insert(manipPlanner.contactStaticCandidates.end(), environmentContacts.begin(), environmentContacts.end());
+    for (int i=0; i<cubeContacts.size(); i++) cubeContacts[i]->isStatic = false;
+    manipPlanner.contactDynamicCandidates.insert(manipPlanner.contactDynamicCandidates.end(), cubeContacts.begin(), cubeContacts.end());
+    addLimbInfo(manipPlanner, robot);
+
+    // 現在触れているかどうかの判定にはlocalPoseを用いるが、currentContactで接触点探索が行われている場合localPoseが変わっている。このため、currentContactに含まれる、ロボットのDynamicCandidateのlocalPoseはcurrentContactのものにする
+    for (int i=0; i<manipPlanner.currentContactState->contacts.size(); i++) {
+      if(manipPlanner.currentContactState->contacts[i].c1.bodyName == robot->name()) {
+        for (int j=0; j<manipPlanner.contactDynamicCandidates.size(); j++) {
+          if ((manipPlanner.contactDynamicCandidates[j]->bodyName == manipPlanner.currentContactState->contacts[i].c1.bodyName) && (manipPlanner.contactDynamicCandidates[j]->linkName == manipPlanner.currentContactState->contacts[i].c1.linkName)) {
+            manipPlanner.contactDynamicCandidates[j]->localPose = manipPlanner.currentContactState->contacts[i].c1.localPose;
+          }
+        }
+      }
+      if(manipPlanner.currentContactState->contacts[i].c2.bodyName == robot->name()) {
+        for (int j=0; j<manipPlanner.contactDynamicCandidates.size(); j++) {
+          if ((manipPlanner.contactDynamicCandidates[j]->bodyName == manipPlanner.currentContactState->contacts[i].c2.bodyName) && (manipPlanner.contactDynamicCandidates[j]->linkName == manipPlanner.currentContactState->contacts[i].c2.linkName)) {
+            manipPlanner.contactDynamicCandidates[j]->localPose = manipPlanner.currentContactState->contacts[i].c2.localPose;
+          }
+        }
+      }
+    }
+    manipPlanner.field = locoPlanner.field;
+    // targetContact
+    {
+      graph_search_wholebody_contact_planner::ContactCandidate c1;
+      c1.bodyName = cube->name();
+      c1.linkName = "cube";
+      c1.isStatic = false;
+      c1.localPose.translation() = cnoid::Vector3(0, 0, -0.2);
+      c1.localPose.linear() = cnoid::rotFromRpy(0.0, 0.0, 0.0);
+      graph_search_wholebody_contact_planner::ContactCandidate c2;
+      c2.bodyName = "floor";
+      c2.linkName = "table2";
+      c2.isStatic = true;
+      c2.localPose.translation() = cnoid::Vector3(0.7, 0.0, 1.0);
+      c2.localPose.linear() = cnoid::rotFromRpy(0.0, M_PI, M_PI/2);
+      manipPlanner.targetContact = std::make_pair(graph_search_wholebody_contact_planner::Contact(c1,c2), false);
+    }
+
+    {
+      std::vector<cnoid::SgNodePtr> drawOnObjects;
+      std::vector<cnoid::SgNodePtr> csc = graph_search_wholebody_contact_planner::generateCandidateMarkers(manipPlanner.bodies, manipPlanner.contactStaticCandidates);
+      std::vector<cnoid::SgNodePtr> cdc = graph_search_wholebody_contact_planner::generateCandidateMarkers(manipPlanner.bodies, manipPlanner.contactDynamicCandidates);
+      drawOnObjects.insert(drawOnObjects.end(), csc.begin(), csc.end());
+      drawOnObjects.insert(drawOnObjects.end(), cdc.begin(), cdc.end());
+      viewer->drawOn(drawOnObjects);
+    }
+    viewer->drawObjects();
+
+    // manipPlanner.pikParam.debugLevel = 3;
+    // manipPlanner.pikParam.viewMilliseconds = -1;
+    // manipPlanner.pikParam.viewer = viewer;
+
+    if (manipPlanner.solve()) std::cerr << "detach solved" << std::endl;
+    else std::cerr << "detach failed" << std::endl;
+
+    std::vector<graph_search_wholebody_contact_planner::ContactState> gsDetachPath;
+    manipPlanner.goalPath(gsDetachPath);
 
     while (true) {
       for(int i=0;i<cwcpPath.size();i++){
@@ -147,6 +246,25 @@ namespace graph_search_wholebody_contact_planner_sample{
           std::this_thread::sleep_for(std::chrono::milliseconds(1000 / gsGoPath[i].transition.size()));
         }
         global_inverse_kinematics_solver::frame2Link(gsGoPath[i].frame, locoPlanner.variables);
+        for(int b=0; b<param->bodies.size(); b++) {
+          param->bodies[b]->calcForwardKinematics(false);
+          param->bodies[b]->calcCenterOfMass();
+        }
+        viewer->drawObjects();
+        std::this_thread::sleep_for(std::chrono::milliseconds(1000));
+      }
+
+      for(int i=0;i<gsDetachPath.size();i++){
+        for (int j=0;j<gsDetachPath[i].transition.size();j++) {
+          global_inverse_kinematics_solver::frame2Link(gsDetachPath[i].transition[j], manipPlanner.variables);
+          for(int b=0; b<param->bodies.size(); b++) {
+            param->bodies[b]->calcForwardKinematics(false);
+            param->bodies[b]->calcCenterOfMass();
+          }
+          viewer->drawObjects();
+          std::this_thread::sleep_for(std::chrono::milliseconds(1000 / gsDetachPath[i].transition.size()));
+        }
+        global_inverse_kinematics_solver::frame2Link(gsDetachPath[i].frame, manipPlanner.variables);
         for(int b=0; b<param->bodies.size(); b++) {
           param->bodies[b]->calcForwardKinematics(false);
           param->bodies[b]->calcCenterOfMass();

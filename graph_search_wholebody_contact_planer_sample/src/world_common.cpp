@@ -195,115 +195,115 @@ namespace graph_search_wholebody_contact_planner_sample{
           posTransform->addChild(shape);
           rootLink->addShapeNode(posTransform);
         }
-        {
-          cnoid::SgShapePtr shape = new cnoid::SgShape();
-          shape->setMesh(meshGenerator.generateBox(cnoid::Vector3(5,2,0.1)));
-          cnoid::SgMaterialPtr material = new cnoid::SgMaterial();
-          material->setTransparency(0.9);
-          shape->setMaterial(material);
-          cnoid::SgPosTransformPtr posTransform = new cnoid::SgPosTransform();
-          posTransform->translation() = cnoid::Vector3(1.0,0,2.05);
-          posTransform->addChild(shape);
-          rootLink->addShapeNode(posTransform);
-        }
-        {
-          cnoid::SgShapePtr shape = new cnoid::SgShape();
-          shape->setMesh(meshGenerator.generateBox(cnoid::Vector3(5,0.1,2.0)));
-          cnoid::SgMaterialPtr material = new cnoid::SgMaterial();
-          material->setTransparency(0.9);
-          shape->setMaterial(material);
-          cnoid::SgPosTransformPtr posTransform = new cnoid::SgPosTransform();
-          posTransform->translation() = cnoid::Vector3(1.0,0.95,1.0);
-          posTransform->addChild(shape);
-          rootLink->addShapeNode(posTransform);
-        }
-        {
-          cnoid::SgShapePtr shape = new cnoid::SgShape();
-          shape->setMesh(meshGenerator.generateBox(cnoid::Vector3(5,0.1,2.0)));
-          cnoid::SgMaterialPtr material = new cnoid::SgMaterial();
-          material->setTransparency(0.9);
-          shape->setMaterial(material);
-          cnoid::SgPosTransformPtr posTransform = new cnoid::SgPosTransform();
-          posTransform->translation() = cnoid::Vector3(1.0,-0.95,1.0);
-          posTransform->addChild(shape);
-          rootLink->addShapeNode(posTransform);
-        }
-        {
-          cnoid::SgShapePtr shape = new cnoid::SgShape();
-          shape->setMesh(meshGenerator.generateBox(cnoid::Vector3(0.6,0.1,2.0)));
-          cnoid::SgMaterialPtr material = new cnoid::SgMaterial();
-          material->setTransparency(0.5);
-          shape->setMaterial(material);
-          cnoid::SgPosTransformPtr posTransform = new cnoid::SgPosTransform();
-          // posTransform->translation() = cnoid::Vector3(1.0,0.35,1.0);
-          posTransform->translation() = cnoid::Vector3(1.0,0.45,1.0);
-          posTransform->addChild(shape);
-          rootLink->addShapeNode(posTransform);
-        }
-        {
-          cnoid::SgShapePtr shape = new cnoid::SgShape();
-          shape->setMesh(meshGenerator.generateBox(cnoid::Vector3(0.6,0.1,2.0)));
-          cnoid::SgMaterialPtr material = new cnoid::SgMaterial();
-          material->setTransparency(0.5);
-          shape->setMaterial(material);
-          cnoid::SgPosTransformPtr posTransform = new cnoid::SgPosTransform();
-          // posTransform->translation() = cnoid::Vector3(1.0,-0.35,1.0);
-          posTransform->translation() = cnoid::Vector3(1.0,-0.45,1.0);
-          posTransform->addChild(shape);
-          rootLink->addShapeNode(posTransform);
-        }
-        {
-          cnoid::SgShapePtr shape = new cnoid::SgShape();
-          shape->setMesh(meshGenerator.generateBox(cnoid::Vector3(1.0,0.1,2.0)));
-          cnoid::SgMaterialPtr material = new cnoid::SgMaterial();
-          material->setTransparency(0.5);
-          shape->setMaterial(material);
-          cnoid::SgPosTransformPtr posTransform = new cnoid::SgPosTransform();
-          // posTransform->translation() = cnoid::Vector3(0.3,-0.6,1.0);
-          posTransform->translation() = cnoid::Vector3(0.3,-0.7,1.0);
-          posTransform->rotation() = cnoid::rotFromRpy(0,0,M_PI / 6);
-          posTransform->addChild(shape);
-          rootLink->addShapeNode(posTransform);
-        }
-        {
-          cnoid::SgShapePtr shape = new cnoid::SgShape();
-          shape->setMesh(meshGenerator.generateBox(cnoid::Vector3(1.0,0.1,2.0)));
-          cnoid::SgMaterialPtr material = new cnoid::SgMaterial();
-          material->setTransparency(0.5);
-          shape->setMaterial(material);
-          cnoid::SgPosTransformPtr posTransform = new cnoid::SgPosTransform();
-          // posTransform->translation() = cnoid::Vector3(0.3,0.6,1.0);
-          posTransform->translation() = cnoid::Vector3(0.3,0.7,1.0);
-          posTransform->rotation() = cnoid::rotFromRpy(0,0,-M_PI / 6);
-          posTransform->addChild(shape);
-          rootLink->addShapeNode(posTransform);
-        }
-        {
-          cnoid::SgShapePtr shape = new cnoid::SgShape();
-          shape->setMesh(meshGenerator.generateBox(cnoid::Vector3(1.0,0.1,2.0)));
-          cnoid::SgMaterialPtr material = new cnoid::SgMaterial();
-          material->setTransparency(0.5);
-          shape->setMaterial(material);
-          cnoid::SgPosTransformPtr posTransform = new cnoid::SgPosTransform();
-          // posTransform->translation() = cnoid::Vector3(1.7,-0.6,1.0);
-          posTransform->translation() = cnoid::Vector3(1.7,-0.7,1.0);
-          posTransform->rotation() = cnoid::rotFromRpy(0,0,-M_PI / 6);
-          posTransform->addChild(shape);
-          rootLink->addShapeNode(posTransform);
-        }
-        {
-          cnoid::SgShapePtr shape = new cnoid::SgShape();
-          shape->setMesh(meshGenerator.generateBox(cnoid::Vector3(1.0,0.1,2.0)));
-          cnoid::SgMaterialPtr material = new cnoid::SgMaterial();
-          material->setTransparency(0.5);
-          shape->setMaterial(material);
-          cnoid::SgPosTransformPtr posTransform = new cnoid::SgPosTransform();
-          // posTransform->translation() = cnoid::Vector3(1.7,0.6,1.0);
-          posTransform->translation() = cnoid::Vector3(1.7,0.7,1.0);
-          posTransform->rotation() = cnoid::rotFromRpy(0,0,M_PI / 6);
-          posTransform->addChild(shape);
-          rootLink->addShapeNode(posTransform);
-        }
+        // {
+        //   cnoid::SgShapePtr shape = new cnoid::SgShape();
+        //   shape->setMesh(meshGenerator.generateBox(cnoid::Vector3(5,2,0.1)));
+        //   cnoid::SgMaterialPtr material = new cnoid::SgMaterial();
+        //   material->setTransparency(0.9);
+        //   shape->setMaterial(material);
+        //   cnoid::SgPosTransformPtr posTransform = new cnoid::SgPosTransform();
+        //   posTransform->translation() = cnoid::Vector3(1.0,0,2.05);
+        //   posTransform->addChild(shape);
+        //   rootLink->addShapeNode(posTransform);
+        // }
+        // {
+        //   cnoid::SgShapePtr shape = new cnoid::SgShape();
+        //   shape->setMesh(meshGenerator.generateBox(cnoid::Vector3(5,0.1,2.0)));
+        //   cnoid::SgMaterialPtr material = new cnoid::SgMaterial();
+        //   material->setTransparency(0.9);
+        //   shape->setMaterial(material);
+        //   cnoid::SgPosTransformPtr posTransform = new cnoid::SgPosTransform();
+        //   posTransform->translation() = cnoid::Vector3(1.0,0.95,1.0);
+        //   posTransform->addChild(shape);
+        //   rootLink->addShapeNode(posTransform);
+        // }
+        // {
+        //   cnoid::SgShapePtr shape = new cnoid::SgShape();
+        //   shape->setMesh(meshGenerator.generateBox(cnoid::Vector3(5,0.1,2.0)));
+        //   cnoid::SgMaterialPtr material = new cnoid::SgMaterial();
+        //   material->setTransparency(0.9);
+        //   shape->setMaterial(material);
+        //   cnoid::SgPosTransformPtr posTransform = new cnoid::SgPosTransform();
+        //   posTransform->translation() = cnoid::Vector3(1.0,-0.95,1.0);
+        //   posTransform->addChild(shape);
+        //   rootLink->addShapeNode(posTransform);
+        // }
+        // {
+        //   cnoid::SgShapePtr shape = new cnoid::SgShape();
+        //   shape->setMesh(meshGenerator.generateBox(cnoid::Vector3(0.6,0.1,2.0)));
+        //   cnoid::SgMaterialPtr material = new cnoid::SgMaterial();
+        //   material->setTransparency(0.5);
+        //   shape->setMaterial(material);
+        //   cnoid::SgPosTransformPtr posTransform = new cnoid::SgPosTransform();
+        //   // posTransform->translation() = cnoid::Vector3(1.0,0.35,1.0);
+        //   posTransform->translation() = cnoid::Vector3(1.0,0.45,1.0);
+        //   posTransform->addChild(shape);
+        //   rootLink->addShapeNode(posTransform);
+        // }
+        // {
+        //   cnoid::SgShapePtr shape = new cnoid::SgShape();
+        //   shape->setMesh(meshGenerator.generateBox(cnoid::Vector3(0.6,0.1,2.0)));
+        //   cnoid::SgMaterialPtr material = new cnoid::SgMaterial();
+        //   material->setTransparency(0.5);
+        //   shape->setMaterial(material);
+        //   cnoid::SgPosTransformPtr posTransform = new cnoid::SgPosTransform();
+        //   // posTransform->translation() = cnoid::Vector3(1.0,-0.35,1.0);
+        //   posTransform->translation() = cnoid::Vector3(1.0,-0.45,1.0);
+        //   posTransform->addChild(shape);
+        //   rootLink->addShapeNode(posTransform);
+        // }
+        // {
+        //   cnoid::SgShapePtr shape = new cnoid::SgShape();
+        //   shape->setMesh(meshGenerator.generateBox(cnoid::Vector3(1.0,0.1,2.0)));
+        //   cnoid::SgMaterialPtr material = new cnoid::SgMaterial();
+        //   material->setTransparency(0.5);
+        //   shape->setMaterial(material);
+        //   cnoid::SgPosTransformPtr posTransform = new cnoid::SgPosTransform();
+        //   // posTransform->translation() = cnoid::Vector3(0.3,-0.6,1.0);
+        //   posTransform->translation() = cnoid::Vector3(0.3,-0.7,1.0);
+        //   posTransform->rotation() = cnoid::rotFromRpy(0,0,M_PI / 6);
+        //   posTransform->addChild(shape);
+        //   rootLink->addShapeNode(posTransform);
+        // }
+        // {
+        //   cnoid::SgShapePtr shape = new cnoid::SgShape();
+        //   shape->setMesh(meshGenerator.generateBox(cnoid::Vector3(1.0,0.1,2.0)));
+        //   cnoid::SgMaterialPtr material = new cnoid::SgMaterial();
+        //   material->setTransparency(0.5);
+        //   shape->setMaterial(material);
+        //   cnoid::SgPosTransformPtr posTransform = new cnoid::SgPosTransform();
+        //   // posTransform->translation() = cnoid::Vector3(0.3,0.6,1.0);
+        //   posTransform->translation() = cnoid::Vector3(0.3,0.7,1.0);
+        //   posTransform->rotation() = cnoid::rotFromRpy(0,0,-M_PI / 6);
+        //   posTransform->addChild(shape);
+        //   rootLink->addShapeNode(posTransform);
+        // }
+        // {
+        //   cnoid::SgShapePtr shape = new cnoid::SgShape();
+        //   shape->setMesh(meshGenerator.generateBox(cnoid::Vector3(1.0,0.1,2.0)));
+        //   cnoid::SgMaterialPtr material = new cnoid::SgMaterial();
+        //   material->setTransparency(0.5);
+        //   shape->setMaterial(material);
+        //   cnoid::SgPosTransformPtr posTransform = new cnoid::SgPosTransform();
+        //   // posTransform->translation() = cnoid::Vector3(1.7,-0.6,1.0);
+        //   posTransform->translation() = cnoid::Vector3(1.7,-0.7,1.0);
+        //   posTransform->rotation() = cnoid::rotFromRpy(0,0,-M_PI / 6);
+        //   posTransform->addChild(shape);
+        //   rootLink->addShapeNode(posTransform);
+        // }
+        // {
+        //   cnoid::SgShapePtr shape = new cnoid::SgShape();
+        //   shape->setMesh(meshGenerator.generateBox(cnoid::Vector3(1.0,0.1,2.0)));
+        //   cnoid::SgMaterialPtr material = new cnoid::SgMaterial();
+        //   material->setTransparency(0.5);
+        //   shape->setMaterial(material);
+        //   cnoid::SgPosTransformPtr posTransform = new cnoid::SgPosTransform();
+        //   // posTransform->translation() = cnoid::Vector3(1.7,0.6,1.0);
+        //   posTransform->translation() = cnoid::Vector3(1.7,0.7,1.0);
+        //   posTransform->rotation() = cnoid::rotFromRpy(0,0,M_PI / 6);
+        //   posTransform->addChild(shape);
+        //   rootLink->addShapeNode(posTransform);
+        // }
         {
           cnoid::SgShapePtr shape = new cnoid::SgShape();
           shape->setMesh(meshGenerator.generateCylinder(0.1, 0.9));
@@ -325,33 +325,33 @@ namespace graph_search_wholebody_contact_planner_sample{
           material->setDiffuseColor(cnoid::Vector3f(0.6,0.6,0.6));
           shape->setMaterial(material);
           cnoid::SgPosTransformPtr posTransform = new cnoid::SgPosTransform();
-          posTransform->translation() = cnoid::Vector3(2.7,0,0.45);
+          posTransform->translation() = cnoid::Vector3(0.7,0,0.45);
           posTransform->rotation() = cnoid::rotFromRpy(M_PI /2, 0, 0);
           posTransform->addChild(shape);
           rootLink->addShapeNode(posTransform);
         }
-        {
-          cnoid::SgShapePtr shape = new cnoid::SgShape();
-          shape->setMesh(meshGenerator.generateBox(cnoid::Vector3(0.1,1.8,2.0)));
-          cnoid::SgMaterialPtr material = new cnoid::SgMaterial();
-          material->setTransparency(0.9);
-          shape->setMaterial(material);
-          cnoid::SgPosTransformPtr posTransform = new cnoid::SgPosTransform();
-          posTransform->translation() = cnoid::Vector3(-1.05,0.0,1.0);
-          posTransform->addChild(shape);
-          rootLink->addShapeNode(posTransform);
-        }
-        {
-          cnoid::SgShapePtr shape = new cnoid::SgShape();
-          shape->setMesh(meshGenerator.generateBox(cnoid::Vector3(0.1,1.8,2.0)));
-          cnoid::SgMaterialPtr material = new cnoid::SgMaterial();
-          material->setTransparency(0.9);
-          shape->setMaterial(material);
-          cnoid::SgPosTransformPtr posTransform = new cnoid::SgPosTransform();
-          posTransform->translation() = cnoid::Vector3(3.05,0.0,1.0);
-          posTransform->addChild(shape);
-          rootLink->addShapeNode(posTransform);
-        }
+        // {
+        //   cnoid::SgShapePtr shape = new cnoid::SgShape();
+        //   shape->setMesh(meshGenerator.generateBox(cnoid::Vector3(0.1,1.8,2.0)));
+        //   cnoid::SgMaterialPtr material = new cnoid::SgMaterial();
+        //   material->setTransparency(0.9);
+        //   shape->setMaterial(material);
+        //   cnoid::SgPosTransformPtr posTransform = new cnoid::SgPosTransform();
+        //   posTransform->translation() = cnoid::Vector3(-1.05,0.0,1.0);
+        //   posTransform->addChild(shape);
+        //   rootLink->addShapeNode(posTransform);
+        // }
+        // {
+        //   cnoid::SgShapePtr shape = new cnoid::SgShape();
+        //   shape->setMesh(meshGenerator.generateBox(cnoid::Vector3(0.1,1.8,2.0)));
+        //   cnoid::SgMaterialPtr material = new cnoid::SgMaterial();
+        //   material->setTransparency(0.9);
+        //   shape->setMaterial(material);
+        //   cnoid::SgPosTransformPtr posTransform = new cnoid::SgPosTransform();
+        //   posTransform->translation() = cnoid::Vector3(3.05,0.0,1.0);
+        //   posTransform->addChild(shape);
+        //   rootLink->addShapeNode(posTransform);
+        // }
         cnoid::LinkPtr table1 = new cnoid::Link();
         {
           table1->setName("table1");
@@ -378,7 +378,7 @@ namespace graph_search_wholebody_contact_planner_sample{
           material->setDiffuseColor(cnoid::Vector3f(0.6, 0.3, 0.2));
           shape->setMaterial(material);
           cnoid::SgPosTransformPtr posTransform = new cnoid::SgPosTransform();
-          posTransform->translation() = cnoid::Vector3(2.7,0,1.0-0.05);
+          posTransform->translation() = cnoid::Vector3(0.7,0,1.0-0.05);
           posTransform->rotation() = cnoid::rotFromRpy(M_PI /2, 0, 0);
           posTransform->addChild(shape);
           table2->addShapeNode(posTransform);
@@ -459,7 +459,7 @@ namespace graph_search_wholebody_contact_planner_sample{
     cube->setRootLink(rootLink);
     param->bodies.push_back(cube);
     // param->variables.push_back(cube->rootLink());
-    cube->rootLink()->p() = cnoid::Vector3(2.7,0,1.2);
+    cube->rootLink()->p() = cnoid::Vector3(0.7,0,1.2);
     cube->calcForwardKinematics();
     cube->calcCenterOfMass();
 

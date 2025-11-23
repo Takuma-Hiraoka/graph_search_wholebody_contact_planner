@@ -35,12 +35,13 @@ namespace graph_search_wholebody_contact_planner{
       gikParam.pikParam.calcVelocity = false;
       gikParam.delta = 0.1; // この距離内のstateは、中間のconstraintチェック無しで遷移可能. stateごとの距離がこの距離以内だとそもそも同じstateとみなされてあたらしくstateを作らない. 足を浮かせるとき等はstateが大きく変化しないので、deltaも小さくしておかないとstateが増えない.
       gikParam.projectCellSize = 0.4;
-      gikParam.threads = 1;
+      gikParam.threads = 3;
       gikParam.timeout = 1.0;
       gikParam.goalBias = 0.2;
       gikParam.pikParam.we = 1e2; // 逆運動学が振動しないこと優先. 1e0だと不安定. 1e3だと大きすぎる
       gikParam.pikParam.wmax = 1e1; // 1e2程度にすると関節がめり込まなくなるが、ほとんど動かない.
       gikParam.pikParam.convergeThre = 5e-3;
+      gikParam.modelMutex = std::make_shared<std::mutex>();
 
       pikParam.checkFinalState=true;
       pikParam.calcVelocity = false;

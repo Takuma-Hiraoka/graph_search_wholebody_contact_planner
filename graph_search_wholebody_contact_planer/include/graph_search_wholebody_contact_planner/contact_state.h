@@ -15,7 +15,7 @@ namespace graph_search_wholebody_contact_planner{
   class Contact {
     friend bool operator==(const Contact& a, const Contact& b) { // ContactはlocalPose違いも同じ接触とみなす. 終了条件等で複数のcontactをまとめて扱うため. 別の接触とみなしてほしい場合はnameを別にすること.
       return ((a.c1.bodyName == b.c1.bodyName) && (a.c2.bodyName == b.c2.bodyName) && (a.c1.linkName == b.c1.linkName) && (a.c2.linkName == b.c2.linkName)) ||
-        ((a.c1.bodyName == b.c2.bodyName) && (a.c1.bodyName == b.c2.bodyName) && (a.c2.linkName == b.c1.linkName) && (a.c2.linkName == b.c1.linkName));
+        ((a.c1.bodyName == b.c2.bodyName) && (a.c2.bodyName == b.c1.bodyName) && (a.c1.linkName == b.c2.linkName) && (a.c2.linkName == b.c1.linkName));
     }
   public:
     Contact() {}

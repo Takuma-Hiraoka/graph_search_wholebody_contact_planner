@@ -37,7 +37,15 @@ namespace graph_search_wholebody_contact_planner{
     ContactState state = std::static_pointer_cast<ContactNode>(node)->state();
     double heuristic = 0;
     double nSatisfy = 1e3;
-    double scfrNSatisfy = 1e0;
+    double contactWeight = 1e1;
+    double scfrNSatisfy = 1e2;
+    // 対象物体に触れる接触以外は触れないように
+    // for (int i=0; i<state.contacts.size(); i++) {
+    //   if (!((!targetContact.first.c1.isStatic && (((targetContact.first.c1.bodyName == state.contacts[i].c1.bodyName) && (targetContact.first.c1.linkName == state.contacts[i].c1.linkName)) || ((targetContact.first.c1.bodyName == state.contacts[i].c2.bodyName) && (targetContact.first.c1.linkName == state.contacts[i].c2.linkName)))) ||
+    //         (!targetContact.first.c2.isStatic && (((targetContact.first.c2.bodyName == state.contacts[i].c1.bodyName) && (targetContact.first.c2.linkName == state.contacts[i].c1.linkName)) || ((targetContact.first.c2.bodyName == state.contacts[i].c2.bodyName) && (targetContact.first.c2.linkName == state.contacts[i].c2.linkName)))))) {
+    //     heuristic += contactWeight;
+    //   }
+    // }
     if (contactCheckParam->targetContact.second) { // attach
       bool attach = false;
       for (int i=0; i<state.contacts.size(); i++) {
@@ -556,6 +564,25 @@ namespace graph_search_wholebody_contact_planner{
                                                                          contactCheckParam->pikParam,
                                                                          tmpPath
                                                                          );
+          if(!solved) {
+            std::vector<std::vector<std::shared_ptr<ik_constraint2::IKConstraint> > > gikConstraints{constraints0, constraints1};
+            global_inverse_kinematics_solver::GIKParam gikParam = contactCheckParam->gikParam;
+            gikParam.projectLink.resize(1);
+            gikParam.projectLink[0] = moveContactConstraint->A_link() ? moveContactConstraint->A_link() : moveContactConstraint->B_link();
+            gikParam.projectLocalPose = moveContactConstraint->A_link() ? moveContactConstraint->A_localpos() : moveContactConstraint->B_localpos();
+            // 関節角度上下限を厳密に満たしていないと、omplのstart stateがエラーになるので
+            for(int i=0;i<contactCheckParam->variables.size();i++){
+              if(contactCheckParam->variables[i]->isRevoluteJoint() || contactCheckParam->variables[i]->isPrismaticJoint()) {
+                contactCheckParam->variables[i]->q() = std::max(std::min(contactCheckParam->variables[i]->q(),contactCheckParam->variables[i]->q_upper()),contactCheckParam->variables[i]->q_lower());
+              }
+            }
+            solved = global_inverse_kinematics_solver::solveGIK(variables,
+                                                                gikConstraints,
+                                                                constraints2,
+                                                                contactCheckParam->nominals,
+                                                                gikParam,
+                                                                tmpPath);
+          }
           if (solved) {
             for (int p=0; p<tmpPath->size(); p++) {
               (*tmpPath)[p].resize((*tmpPath)[p].size() - 7); // bodyContact用のframeを消す

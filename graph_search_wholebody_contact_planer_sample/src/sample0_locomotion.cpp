@@ -73,8 +73,7 @@ namespace graph_search_wholebody_contact_planner_sample{
       ccMarkers->setRootLink(rootLink);
       graph_search_wholebody_contact_planner::generateCandidateVisualLink(planner.bodies, rootLink, guidedCandidates, cnoid::Vector3f(1.0, 0.0, 0.0));
     }
-    viewer->objects(ccMarkers);
-
+    drawOnObjects.push_back(ccMarkers->rootLink()->visualShape());
     viewer->drawOn(drawOnObjects);
     viewer->drawObjects();
 
@@ -85,10 +84,9 @@ namespace graph_search_wholebody_contact_planner_sample{
 
     planner.addCandidateDistance = 1.2;
     planner.addNearGuideCandidateDistance = 0.1;
-    planner.currentContactState->transition.push_back(planner.currentContactState->frame);
-    planner.threads() = 20;
+    planner.threads() = 10;
     planner.debugLevel() = 0;
-    // planner.maxExtendNum() = 1000;
+    // planner.maxExtendNum() = 10;
     planner.solve();
 
     std::vector<graph_search_wholebody_contact_planner::ContactState> gsPath;

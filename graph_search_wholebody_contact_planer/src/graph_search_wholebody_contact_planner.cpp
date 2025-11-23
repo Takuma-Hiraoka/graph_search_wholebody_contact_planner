@@ -13,6 +13,7 @@ namespace graph_search_wholebody_contact_planner{
 
   bool WholeBodyContactPlanner::solve() {
     std::shared_ptr<ContactNode> current_node = std::make_shared<ContactNode>();
+    if (this->currentContactState->transition.size() == 0) this->currentContactState->transition.push_back(this->currentContactState->frame);
     current_node->state() = *(this->currentContactState);
     this->graph().push_back(current_node);
 

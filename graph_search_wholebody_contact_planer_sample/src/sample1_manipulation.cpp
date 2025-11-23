@@ -111,8 +111,7 @@ namespace graph_search_wholebody_contact_planner_sample{
     // planner.pikParam.viewer = viewer;
 
     planner.addCandidateDistance = 1.0;
-    planner.currentContactState->transition.push_back(planner.currentContactState->frame);
-    planner.threads() = 20;
+    planner.threads() = 10;
     planner.debugLevel() = 0;
     planner.maxExtendNum() = 1e8;
     if (planner.solve()) std::cerr << "detach solved" << std::endl;
