@@ -154,7 +154,7 @@ namespace graph_search_wholebody_contact_planner_sample{
       manipPlanner.currentContactState->contacts.push_back(graph_search_wholebody_contact_planner::Contact(c1,c2));
     }
     global_inverse_kinematics_solver::link2Frame(manipPlanner.variables, manipPlanner.currentContactState->frame);
-    // manipPlanner.contactStaticCandidates.insert(manipPlanner.contactStaticCandidates.end(), environmentContacts.begin(), environmentContacts.end());
+    manipPlanner.contactStaticCandidates.insert(manipPlanner.contactStaticCandidates.end(), environmentContacts.begin(), environmentContacts.end());
     for (int i=0; i<cubeContacts.size(); i++) cubeContacts[i]->isStatic = false;
     manipPlanner.contactDynamicCandidates.insert(manipPlanner.contactDynamicCandidates.end(), cubeContacts.begin(), cubeContacts.end());
     addLimbInfo(manipPlanner, robot);
@@ -203,10 +203,6 @@ namespace graph_search_wholebody_contact_planner_sample{
       viewer->drawOn(drawOnObjects);
     }
     viewer->drawObjects();
-
-    // manipPlanner.pikParam.debugLevel = 3;
-    // manipPlanner.pikParam.viewMilliseconds = -1;
-    // manipPlanner.pikParam.viewer = viewer;
 
     if (manipPlanner.solve()) std::cerr << "detach solved" << std::endl;
     else std::cerr << "detach failed" << std::endl;

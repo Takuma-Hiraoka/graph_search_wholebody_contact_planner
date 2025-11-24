@@ -19,7 +19,7 @@ namespace graph_search_wholebody_contact_planner{
     void cloneCheckParam(std::shared_ptr<ContactTransitionCheckParam> checkParam) override;
     bool isGoalSatisfied(std::shared_ptr<graph_search::Planner::TransitionCheckParam> checkParam) override;
     void calcHeuristic(std::shared_ptr<graph_search::Planner::TransitionCheckParam> checkParam, std::shared_ptr<graph_search::Node> node) override;
-    std::vector<std::shared_ptr<graph_search::Node> > gatherAdjacentNodes(std::shared_ptr<graph_search::Planner::TransitionCheckParam> checkParam, std::shared_ptr<graph_search::Node> extend_node) override;
+    std::vector<std::shared_ptr<graph_search::Node> > gatherAdjacentNodes(std::shared_ptr<graph_search::Planner::TransitionCheckParam> checkParam) override;
     void candidatesFromGuide(const std::vector<cnoid::BodyPtr> bodies, const std::vector<std::shared_ptr<ContactCandidate> >& contactCandidatesRaw, const std::vector<std::pair<std::vector<double>, std::vector<Contact> > >& guidePath, const std::string& bodyName, const std::string& linkName, std::vector<std::shared_ptr<ContactCandidate> >& candidates, const int& level=0);
     bool solveContactIK(std::shared_ptr<const ContactTransitionCheckParam> checkParam,
                        Contact& moveContact,

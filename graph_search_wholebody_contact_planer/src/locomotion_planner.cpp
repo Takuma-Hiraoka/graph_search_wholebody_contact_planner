@@ -118,10 +118,10 @@ namespace graph_search_wholebody_contact_planner{
     node->heuristic() = (contactCheckParam->guidePath.size() - 1 - nearestIdx) * 1e3 + diffSum;
   }
 
-  std::vector<std::shared_ptr<graph_search::Node> > WholeBodyLocomotionContactPlanner::gatherAdjacentNodes(std::shared_ptr<graph_search::Planner::TransitionCheckParam> checkParam, std::shared_ptr<graph_search::Node> extend_node) {
+  std::vector<std::shared_ptr<graph_search::Node> > WholeBodyLocomotionContactPlanner::gatherAdjacentNodes(std::shared_ptr<graph_search::Planner::TransitionCheckParam> checkParam) {
     std::shared_ptr<LocomotionContactTransitionCheckParam> contactCheckParam = std::static_pointer_cast<WholeBodyLocomotionContactPlanner::LocomotionContactTransitionCheckParam>(checkParam);
-    ContactState extend_state = std::static_pointer_cast<ContactNode>(extend_node)->state();
-    if (this->debugLevel() >= 2) {
+    ContactState extend_state = contactCheckParam->postState;
+    if (contactCheckParam->debugLevel >= 2) {
       std::cerr << "extend_state" << std::endl;
       std::cerr << extend_state << std::endl;
     }
@@ -130,7 +130,6 @@ namespace graph_search_wholebody_contact_planner{
     if (extend_state.contacts.size() >= 2) {
       for (int i=0; i<extend_state.contacts.size();i++) {
         std::shared_ptr<ContactNode> newNode = std::make_shared<ContactNode>();
-        newNode->parent() = extend_node;
         newNode->state() = extend_state;
         newNode->state().contacts.erase(newNode->state().contacts.begin()+i);
         adjacentNodes.push_back(newNode);
@@ -138,12 +137,12 @@ namespace graph_search_wholebody_contact_planner{
     }
 
     // static contact
-    for (int i=0; i<this->contactDynamicCandidates.size(); i++) {
+    for (int i=0; i<contactCheckParam->contactDynamicCandidates.size(); i++) {
       // staticCandidateと接触しているものを更にstaticCandidateと接触させることはしない
       bool skip = false;
       for (int j=0; j<extend_state.contacts.size(); j++) {
-        if (((this->contactDynamicCandidates[i]->bodyName == extend_state.contacts[j].c1.bodyName) && (this->contactDynamicCandidates[i]->linkName == extend_state.contacts[j].c1.linkName) && (extend_state.contacts[j].c2.isStatic)) ||
-            ((this->contactDynamicCandidates[i]->bodyName == extend_state.contacts[j].c2.bodyName) && (this->contactDynamicCandidates[i]->linkName == extend_state.contacts[j].c2.linkName) && (extend_state.contacts[j].c1.isStatic))) {
+        if (((contactCheckParam->contactDynamicCandidates[i]->bodyName == extend_state.contacts[j].c1.bodyName) && (contactCheckParam->contactDynamicCandidates[i]->linkName == extend_state.contacts[j].c1.linkName) && (extend_state.contacts[j].c2.isStatic)) ||
+            ((contactCheckParam->contactDynamicCandidates[i]->bodyName == extend_state.contacts[j].c2.bodyName) && (contactCheckParam->contactDynamicCandidates[i]->linkName == extend_state.contacts[j].c2.linkName) && (extend_state.contacts[j].c1.isStatic))) {
           skip = true;
           break;
         }
@@ -154,22 +153,21 @@ namespace graph_search_wholebody_contact_planner{
       // 高速化のため. gikを使うまでもなく解けない
       cnoid::Vector3 rootPos;
       for (int b=0; b<contactCheckParam->bodies.size(); b++) {
-        if ((contactCheckParam->bodies[b]->name() == this->contactDynamicCandidates[i]->bodyName) && contactCheckParam->bodies[b]->joint(this->contactDynamicCandidates[i]->linkName)) rootPos = contactCheckParam->bodies[b]->rootLink()->p();
+        if ((contactCheckParam->bodies[b]->name() == contactCheckParam->contactDynamicCandidates[i]->bodyName) && contactCheckParam->bodies[b]->joint(contactCheckParam->contactDynamicCandidates[i]->linkName)) rootPos = contactCheckParam->bodies[b]->rootLink()->p();
       }
 
       std::vector<std::shared_ptr<ContactCandidate> > contactStaticCandidatesLimited;
-      for (int j=0; j<this->contactStaticCandidates.size(); j++) {
-        if ((rootPos - this->contactStaticCandidates[j]->localPose.translation()).norm() > this->addCandidateDistance) continue;
-        contactStaticCandidatesLimited.push_back(this->contactStaticCandidates[j]);
+      for (int j=0; j<contactCheckParam->contactStaticCandidates.size(); j++) {
+        if ((rootPos - contactCheckParam->contactStaticCandidates[j]->localPose.translation()).norm() > contactCheckParam->addCandidateDistance) continue;
+        contactStaticCandidatesLimited.push_back(contactCheckParam->contactStaticCandidates[j]);
       }
       std::vector<std::shared_ptr<ContactCandidate> > contactStaticCandidatesNear;
-      candidatesFromGuide(contactCheckParam->bodies, contactStaticCandidatesLimited, contactCheckParam->guidePath, this->contactDynamicCandidates[i]->bodyName, this->contactDynamicCandidates[i]->linkName, contactStaticCandidatesNear, std::static_pointer_cast<ContactNode>(extend_node)->level());
+      candidatesFromGuide(contactCheckParam->bodies, contactStaticCandidatesLimited, contactCheckParam->guidePath, contactCheckParam->contactDynamicCandidates[i]->bodyName, contactCheckParam->contactDynamicCandidates[i]->linkName, contactStaticCandidatesNear, contactCheckParam->level);
 
       for (int j=0; j<contactStaticCandidatesNear.size(); j++) {
         std::shared_ptr<ContactNode> newNode = std::make_shared<ContactNode>();
-        newNode->parent() = extend_node;
         newNode->state() = extend_state;
-        Contact c = Contact(*(this->contactDynamicCandidates[i]), *(contactStaticCandidatesNear[j]));
+        Contact c = Contact(*(contactCheckParam->contactDynamicCandidates[i]), *(contactStaticCandidatesNear[j]));
         newNode->state().contacts.push_back(c);
         adjacentNodes.push_back(newNode);
       }
@@ -177,16 +175,6 @@ namespace graph_search_wholebody_contact_planner{
 
     // dynamic contact
     // locomotionにおいては、dynamicとdynamicは接触しない
-
-    // 再訪しない
-    for (int i=0;i<this->graph().size();i++) {
-      for(int j=0;j<adjacentNodes.size();j++) {
-        if (std::static_pointer_cast<ContactNode>(this->graph()[i])->state() == std::static_pointer_cast<ContactNode>(adjacentNodes[j])->state()) {
-          adjacentNodes.erase(adjacentNodes.begin()+j);
-          break;
-        }
-      }
-    }
 
     std::random_device rd;
     std::mt19937 g(rd());
@@ -304,16 +292,16 @@ namespace graph_search_wholebody_contact_planner{
         constraints1.push_back(constraint);
         Eigen::SparseMatrix<double,Eigen::RowMajor> C(11,6);
         C.insert(0,2) = 1.0;
-        C.insert(1,0) = 1.0; C.insert(1,2) = 0.2;
-        C.insert(2,0) = -1.0; C.insert(2,2) = 0.2;
-        C.insert(3,1) = 1.0; C.insert(3,2) = 0.2;
-        C.insert(4,1) = -1.0; C.insert(4,2) = 0.2;
+        C.insert(1,0) = 1.0; C.insert(1,2) = 0.5;
+        C.insert(2,0) = -1.0; C.insert(2,2) = 0.5;
+        C.insert(3,1) = 1.0; C.insert(3,2) = 0.5;
+        C.insert(4,1) = -1.0; C.insert(4,2) = 0.5;
         C.insert(5,2) = 0.05; C.insert(5,3) = 1.0;
         C.insert(6,2) = 0.05; C.insert(6,3) = -1.0;
         C.insert(7,2) = 0.05; C.insert(7,4) = 1.0;
         C.insert(8,2) = 0.05; C.insert(8,4) = -1.0;
-        C.insert(9,2) = 0.005; C.insert(9,5) = 1.0;
-        C.insert(10,2) = 0.005; C.insert(10,5) = -1.0;
+        C.insert(9,2) = 0.1; C.insert(9,5) = 1.0;
+        C.insert(10,2) = 0.1; C.insert(10,5) = -1.0;
         cnoid::VectorX dl = Eigen::VectorXd::Zero(11);
         cnoid::VectorX du = 1e10 * Eigen::VectorXd::Ones(11);
         du[0] = 2000.0;
@@ -393,7 +381,7 @@ namespace graph_search_wholebody_contact_planner{
 
     unsigned int nominalIdx=0;
     unsigned int targetLevel=0;
-    if (ikState == IKState::DETACH_FIXED) targetLevel = std::min(contactCheckParam->level, (unsigned int)contactCheckParam->guidePath.size()-1);
+    if (ikState == IKState::DETACH_FIXED) targetLevel = std::min(contactCheckParam->level+1, (unsigned int)contactCheckParam->guidePath.size()-1);
     if ((ikState == IKState::ATTACH_PRE) || (ikState == IKState::ATTACH_FIXED)) targetLevel = std::min(contactCheckParam->level+1, (unsigned int)contactCheckParam->guidePath.size()-1);
     for (int i=0; i<contactCheckParam->variables.size(); i++) {
       if (contactCheckParam->variables[i]->isRevoluteJoint() || contactCheckParam->variables[i]->isPrismaticJoint()) {

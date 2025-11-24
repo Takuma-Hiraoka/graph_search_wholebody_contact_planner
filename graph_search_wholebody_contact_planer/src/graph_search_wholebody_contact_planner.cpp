@@ -54,8 +54,12 @@ namespace graph_search_wholebody_contact_planner{
     for(int j=0;j<this->bodyContactConstraints.size();j++){
       checkParam->bodyContactConstraints[j] = this->bodyContactConstraints[j]->clone(modelMap);
     }
+    checkParam->contactDynamicCandidates = this->contactDynamicCandidates;
+    checkParam->contactStaticCandidates = this->contactStaticCandidates;
     checkParam->pikParam = this->pikParam;
     checkParam->gikParam = this->gikParam;
+    checkParam->debugLevel = this->debugLevel();
+    checkParam->addCandidateDistance = this->addCandidateDistance;
   }
 
   void WholeBodyContactPlanner::preCheckTransition(std::shared_ptr<graph_search::Planner::TransitionCheckParam> checkParam, std::shared_ptr<graph_search::Node> extend_node) {
@@ -77,111 +81,18 @@ namespace graph_search_wholebody_contact_planner{
                                      contactCheckParam->postState);
   }
 
-  std::vector<std::shared_ptr<graph_search::Node> > WholeBodyContactPlanner::gatherAdjacentNodes(std::shared_ptr<graph_search::Planner::TransitionCheckParam> checkParam, std::shared_ptr<graph_search::Node> extend_node) {
-    std::shared_ptr<ContactTransitionCheckParam> contactCheckParam = std::static_pointer_cast<WholeBodyContactPlanner::ContactTransitionCheckParam>(checkParam);
-    ContactState extend_state = std::static_pointer_cast<ContactNode>(extend_node)->state();
-    if (this->debugLevel() >= 2) {
-      std::cerr << "extend_state" << std::endl;
-      std::cerr << extend_state << std::endl;
-    }
-    std::vector<std::shared_ptr<graph_search::Node> > adjacentNodes;
-    // 接触の減少
-    if (extend_state.contacts.size() >= 2) {
-      for (int i=0; i<extend_state.contacts.size();i++) {
-        std::shared_ptr<ContactNode> newNode = std::make_shared<ContactNode>();
-        newNode->parent() = extend_node;
-        newNode->state() = extend_state;
-        newNode->state().contacts.erase(newNode->state().contacts.begin()+i);
-        adjacentNodes.push_back(newNode);
-      }
-    }
 
-    // static contact
-    for (int i=0; i<this->contactDynamicCandidates.size(); i++) {
-      // staticCandidateと接触しているものを更にstaticCandidateと接触させることはしない
-      bool skip = false;
-      for (int j=0; j<extend_state.contacts.size(); j++) {
-        if (((this->contactDynamicCandidates[i]->bodyName == extend_state.contacts[j].c1.bodyName) && (this->contactDynamicCandidates[i]->linkName == extend_state.contacts[j].c1.linkName) && (extend_state.contacts[j].c2.isStatic)) ||
-            ((this->contactDynamicCandidates[i]->bodyName == extend_state.contacts[j].c2.bodyName) && (this->contactDynamicCandidates[i]->linkName == extend_state.contacts[j].c2.linkName) && (extend_state.contacts[j].c1.isStatic))) {
-          skip = true;
-          break;
-        }
-      }
-      if (skip) continue;
-
-      // ルートリンク位置からaddCandidateDistanceを超える距離のstaticCandidateと接触させることはしない
-      // 高速化のため. gikを使うまでもなく解けない
-      cnoid::Vector3 rootPos;
-      for (int b=0; b<contactCheckParam->bodies.size(); b++) {
-        if ((contactCheckParam->bodies[b]->name() == this->contactDynamicCandidates[i]->bodyName) && contactCheckParam->bodies[b]->joint(this->contactDynamicCandidates[i]->linkName)) rootPos = contactCheckParam->bodies[b]->rootLink()->p();
-      }
-      for (int j=0; j<this->contactStaticCandidates.size(); j++) {
-        if ((rootPos - this->contactStaticCandidates[j]->localPose.translation()).norm() > this->addCandidateDistance) continue;
-
-        std::shared_ptr<ContactNode> newNode = std::make_shared<ContactNode>();
-        newNode->parent() = extend_node;
-        newNode->state() = extend_state;
-        Contact c = Contact(*(this->contactDynamicCandidates[i]), *(this->contactStaticCandidates[j]));
-        newNode->state().contacts.push_back(c);
-        adjacentNodes.push_back(newNode);
-      }
-    }
-
-    // dynamic contact
-    std::vector<std::shared_ptr<ContactCandidate> > contactDynamicCandidatesBuf;
-    for (int i=0; i<this->contactDynamicCandidates.size(); i++) {
-      // 既に接触している接触候補は接触できない
-      bool in_contact = false;
-      for (int j=0; j<extend_state.contacts.size() && !in_contact; j++) {
-        if (((this->contactDynamicCandidates[i]->bodyName == extend_state.contacts[j].c1.bodyName) && (this->contactDynamicCandidates[i]->linkName == extend_state.contacts[j].c1.linkName) && (this->contactDynamicCandidates[i]->localPose.translation() == extend_state.contacts[j].c1.localPose.translation())) ||
-            ((this->contactDynamicCandidates[i]->bodyName == extend_state.contacts[j].c2.bodyName) && (this->contactDynamicCandidates[i]->linkName == extend_state.contacts[j].c2.linkName) && (this->contactDynamicCandidates[i]->localPose.translation() == extend_state.contacts[j].c2.localPose.translation()))) in_contact = true;
-      }
-      if (!in_contact) contactDynamicCandidatesBuf.push_back(this->contactDynamicCandidates[i]);
-    }
-
-    for (int i=0; i<contactDynamicCandidatesBuf.size(); i++) {
-      // それぞれのルートリンク位置の距離がaddCandidateDistanceを超えるcontactDynamicCandidate同士を接触させることはしない
-      // 高速化のため. gikを使うまでもなく解けない
-      cnoid::Vector3 rootPos1;
-      for (int b=0; b<contactCheckParam->bodies.size(); b++) {
-        if ((contactCheckParam->bodies[b]->name() == contactDynamicCandidatesBuf[i]->bodyName) && contactCheckParam->bodies[b]->joint(contactDynamicCandidatesBuf[i]->linkName)) rootPos1 = contactCheckParam->bodies[b]->rootLink()->p();
-      }
-      for (int j=i+1; j<contactDynamicCandidatesBuf.size(); j++) {
-        // 同じリンク内の候補同士は接触できない
-        if ((contactDynamicCandidatesBuf[i]->bodyName == contactDynamicCandidatesBuf[j]->bodyName) && (contactDynamicCandidatesBuf[i]->linkName == contactDynamicCandidatesBuf[j]->linkName)) continue;
-        cnoid::Vector3 rootPos2;
-        for (int b=0; b<contactCheckParam->bodies.size(); b++) {
-          if ((contactCheckParam->bodies[b]->name() == contactDynamicCandidatesBuf[j]->bodyName) && contactCheckParam->bodies[b]->joint(contactDynamicCandidatesBuf[j]->linkName)) rootPos2 = std::static_pointer_cast<WholeBodyContactPlanner::ContactTransitionCheckParam>(checkParam)->bodies[b]->rootLink()->p();
-        }
-        if ((rootPos1 - rootPos2).norm() > this->addCandidateDistance) continue;
-
-        // localPoseが違ったとしても既に接触しているリンク同士を更に接触させることはしない
-        bool found = false;
-        for (int k=0; k<extend_state.contacts.size() && !found; k++) {
-          if (extend_state.contacts[k] == Contact(*(contactDynamicCandidates[i]), *(contactDynamicCandidates[j]))) found = true;
-        }
-        if (found) continue;
-
-        std::shared_ptr<ContactNode> newNode = std::make_shared<ContactNode>();
-        newNode->parent() = extend_node;
-        newNode->state() = extend_state;
-        Contact c = Contact(*(contactDynamicCandidates[i]), *(contactDynamicCandidates[j]));
-        newNode->state().contacts.push_back(c);
-        adjacentNodes.push_back(newNode);
-      }
-    }
-
+  void WholeBodyContactPlanner::addNodes2Graph(std::vector<std::shared_ptr<graph_search::Node> >& nodes) {
     // 再訪しない
     for (int i=0;i<this->graph().size();i++) {
-      for(int j=0;j<adjacentNodes.size();j++) {
-        if (std::static_pointer_cast<ContactNode>(this->graph()[i])->state() == std::static_pointer_cast<ContactNode>(adjacentNodes[j])->state()) {
-          adjacentNodes.erase(adjacentNodes.begin()+j);
+      for(int j=0;j<nodes.size();j++) {
+        if (std::static_pointer_cast<ContactNode>(this->graph()[i])->state() == std::static_pointer_cast<ContactNode>(nodes[j])->state()) {
+          nodes.erase(nodes.begin()+j);
           break;
         }
       }
     }
-
-    return adjacentNodes;
+    graph_search::Planner::addNodes2Graph(nodes);
   }
 
   bool WholeBodyContactPlanner::checkTransitionImpl(std::shared_ptr<const ContactTransitionCheckParam> checkParam,

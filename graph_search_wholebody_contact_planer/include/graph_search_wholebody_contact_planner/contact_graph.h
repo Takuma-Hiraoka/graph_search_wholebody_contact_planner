@@ -20,7 +20,6 @@ namespace graph_search_wholebody_contact_planner{
     std::vector<std::shared_ptr<ik_constraint2::IKConstraint> > nominals;
     std::vector<std::shared_ptr<ik_constraint2::IKConstraint> > bodyContactConstraints; // A側にlinkやcontact pointを設定しておくこと
     std::shared_ptr<ContactState> currentContactState;
-    std::shared_ptr<ContactState> goalContactState;
     std::vector<std::shared_ptr<ContactCandidate> > contactDynamicCandidates;
     std::vector<std::shared_ptr<ContactCandidate> > contactStaticCandidates; // staticCondidate同士の接触は起こりえない
     prioritized_inverse_kinematics_solver2::IKParam pikParam;
@@ -63,16 +62,19 @@ namespace graph_search_wholebody_contact_planner{
       std::vector<std::shared_ptr<ik_constraint2::IKConstraint> > rejections;
       std::vector<std::shared_ptr<ik_constraint2::IKConstraint> > nominals;
       std::vector<std::shared_ptr<ik_constraint2::IKConstraint> > bodyContactConstraints;
+      std::vector<std::shared_ptr<ContactCandidate> > contactDynamicCandidates;
+      std::vector<std::shared_ptr<ContactCandidate> > contactStaticCandidates;
       prioritized_inverse_kinematics_solver2::IKParam pikParam;
       global_inverse_kinematics_solver::GIKParam gikParam;
+      int debugLevel = 0;
+      double addCandidateDistance = 2.0;
       unsigned int level=0;
     };
     virtual std::shared_ptr<graph_search::Planner::TransitionCheckParam> generateCheckParam() override;
     void preCheckTransition(std::shared_ptr<graph_search::Planner::TransitionCheckParam> checkParam, std::shared_ptr<graph_search::Node> extend_node) override;
     void postCheckTransition(std::shared_ptr<graph_search::Planner::TransitionCheckParam> checkParam, std::shared_ptr<graph_search::Node> extend_node) override;
     bool checkTransition(std::shared_ptr<graph_search::Planner::TransitionCheckParam> checkParam) override;
-    virtual std::vector<std::shared_ptr<graph_search::Node> > gatherAdjacentNodes(std::shared_ptr<graph_search::Planner::TransitionCheckParam> checkParam, std::shared_ptr<graph_search::Node> extend_node) override;
-
+    void addNodes2Graph(std::vector<std::shared_ptr<graph_search::Node> >& nodes) override;
     virtual void cloneCheckParam(std::shared_ptr<ContactTransitionCheckParam> checkParam);
     bool checkTransitionImpl(std::shared_ptr<const ContactTransitionCheckParam> checkParam,
                              ContactState& postState
