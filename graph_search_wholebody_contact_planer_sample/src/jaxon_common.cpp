@@ -15,7 +15,10 @@ namespace graph_search_wholebody_contact_planner_sample{
     robot = bodyLoader.load(ros::package::getPath("jvrc_models") + "/JAXON_JVRC/JAXON_JVRCmain.wrl");
     robot->setName("JAXON");
     if(!robot) std::cerr << "!robot" << std::endl;
+    std::vector<cnoid::BodyPtr> bodies = param->bodies;
+    param->bodies.clear();
     param->bodies.push_back(robot);
+    param->bodies.insert(param->bodies.end(), bodies.begin(), bodies.end());
     std::vector<std::string> contactableLinkNames{
     "LARM_JOINT7",
     "RARM_JOINT7",

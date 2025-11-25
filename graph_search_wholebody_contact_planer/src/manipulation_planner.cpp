@@ -382,6 +382,14 @@ namespace graph_search_wholebody_contact_planner{
         cnoid::VectorX du = 1e10 * Eigen::VectorXd::Ones(11);
         du[0] = 2000.0;
         for (int j=0;j<scfrConstraints.size();j++) {
+          // robotのSCFRは、objectとの接触を除いて調べる
+          // objectの質量はここでは無視. robotの質量に対して十分小さい
+          if ((scfrConstraints[j]->A_robot() == contactCheckParam->bodies[0]) && // robotについて
+              (((scfrConstraints[j]->A_robot()->name() == contactCheckParam->preState.contacts[i].c1.bodyName) && !contactCheckParam->preState.contacts[i].c2.isStatic) ||
+               ((scfrConstraints[j]->A_robot()->name() == contactCheckParam->preState.contacts[i].c2.bodyName) && !contactCheckParam->preState.contacts[i].c1.isStatic)))
+            {
+              continue;
+          }
           // Linkの位置から出す場合、位置固定でも数値誤差によって姿勢が少しずつずれていき、scfr計算の線型計画法に不具合が生じてscfrの領域が潰れる.
           // これを避けるため、staticのときは環境側の接触情報を使う. dynamicのときはbodyごとに2つ以上の接触がありscfrが残ると期待.
           if ((scfrConstraints[j]->A_robot()->name() == contactCheckParam->preState.contacts[i].c1.bodyName) && scfrConstraints[j]->A_robot()->joint(contactCheckParam->preState.contacts[i].c1.linkName)) {

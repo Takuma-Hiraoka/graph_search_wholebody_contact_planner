@@ -571,7 +571,7 @@ namespace graph_search_wholebody_contact_planner{
 
   }
 
-  void convertCWCPParam(const cwcp::CWCPParam& param, const std::vector<std::pair<std::vector<double>, std::vector<std::shared_ptr<cwcp::Contact> > > >& cwcpPath, WholeBodyLocomotionContactPlanner& planner) {
+  void convertParamFromCWCP(const cwcp::CWCPParam& param, const std::vector<std::pair<std::vector<double>, std::vector<std::shared_ptr<cwcp::Contact> > > >& cwcpPath, WholeBodyLocomotionContactPlanner& planner) {
     planner.bodies = param.bodies;
     planner.variables = param.variables;
     planner.constraints = param.constraints;
@@ -623,6 +623,87 @@ namespace graph_search_wholebody_contact_planner{
         c2.isStatic = true;
         planner.guidePath[i].second.push_back(Contact(c1, c2));
       }
+    }
+  }
+
+  void convertDetachParamToCWCP(const WholeBodyContactPlanner& planner, const std::vector<Contact>& currentContacts, const cnoid::BodyPtr robot, const cnoid::BodyPtr object, const std::vector<std::shared_ptr<ik_constraint2_or_keep_collision::ORKeepCollisionConstraint> > reachabilityConstraints, cwcp::CWCPParam& param, std::vector<std::shared_ptr<ik_constraint2::IKConstraint> >& removedConstraints, std::vector<Contact>& stableContacts) {
+    param.bodies = planner.bodies;
+    param.variables = planner.variables;
+    param.nominals = planner.nominals;
+    param.currentContactPoints.clear();
+    removedConstraints.clear();
+    param.constraints.clear();
+    param.goals.clear();
+    param.gikParam.projectLink.clear();
+    // currentContactsについて
+    // robotとobjectの接触をposition constraintを追加
+    // robotと、object以外の接触をcurrentContactsPointsに追加
+    // robotに関与しない接触をstableContactsに追加
+    std::vector<cnoid::LinkPtr> contactRobotLinks;
+    std::vector<cnoid::LinkPtr> contactObjectLinks;
+    for (int i=0; i<currentContacts.size(); i++) {
+      if ((currentContacts[i].c1.bodyName == robot->name()) && (currentContacts[i].c2.bodyName == object->name())) {
+        contactRobotLinks.push_back(robot->link(currentContacts[i].c1.linkName));
+        contactObjectLinks.push_back(object->link(currentContacts[i].c2.linkName));
+        std::shared_ptr<ik_constraint2::PositionConstraint> constraint = std::make_shared<ik_constraint2::PositionConstraint>();
+        constraint->A_link() = robot->link(currentContacts[i].c1.linkName);
+        constraint->A_localpos() = currentContacts[i].c1.localPose;
+        constraint->B_link() = object->link(currentContacts[i].c2.linkName);
+        constraint->B_localpos() = constraint->B_link()->T().inverse() * constraint->A_link()->T() * constraint->A_localpos();
+        param.constraints.push_back(constraint);
+      } else if ((currentContacts[i].c2.bodyName == robot->name()) && (currentContacts[i].c1.bodyName == object->name())) {
+        contactRobotLinks.push_back(robot->link(currentContacts[i].c2.linkName));
+        contactObjectLinks.push_back(object->link(currentContacts[i].c1.linkName));
+        std::shared_ptr<ik_constraint2::PositionConstraint> constraint = std::make_shared<ik_constraint2::PositionConstraint>();
+        constraint->A_link() = robot->link(currentContacts[i].c2.linkName);
+        constraint->A_localpos() = currentContacts[i].c2.localPose;
+        constraint->B_link() = object->link(currentContacts[i].c1.linkName);
+        constraint->B_localpos() = constraint->B_link()->T().inverse() * constraint->A_link()->T() * constraint->A_localpos();
+        param.constraints.push_back(constraint);
+      } else if ((currentContacts[i].c1.bodyName == robot->name()) || (currentContacts[i].c2.bodyName == robot->name())) {
+        std::shared_ptr<cwcp::Contact> contact = std::make_shared<cwcp::Contact>();
+        if (currentContacts[i].c1.bodyName == robot->name()) {
+          contact->c1.link = robot->link(currentContacts[i].c1.linkName);
+          contact->c1.localPose = currentContacts[i].c1.localPose;
+          for (int b=0; b<param.bodies.size(); b++) {
+            if (param.bodies[b]->name() == currentContacts[i].c2.bodyName) contact->c2.link = param.bodies[b]->link(currentContacts[i].c2.linkName);
+          }
+          contact->c2.localPose = currentContacts[i].c2.localPose;
+          contact->c2.localPose.linear() *= cnoid::rotFromRpy(0.0, M_PI, M_PI/2);
+        }
+        if (currentContacts[i].c2.bodyName == robot->name()) {
+          contact->c1.link = robot->link(currentContacts[i].c2.linkName);
+          contact->c1.localPose = currentContacts[i].c2.localPose;
+          for (int b=0; b<param.bodies.size(); b++) {
+            if (param.bodies[b]->name() == currentContacts[i].c2.bodyName) contact->c2.link = param.bodies[b]->link(currentContacts[i].c1.linkName);
+          }
+          contact->c2.localPose = currentContacts[i].c1.localPose;
+          contact->c2.localPose.linear() *= cnoid::rotFromRpy(0.0, M_PI, M_PI/2);
+        }
+        param.currentContactPoints.push_back(contact);
+      } else {
+        stableContacts.push_back(currentContacts[i]);
+      }
+    }
+    // contactしているlinkの干渉を無視
+    for (int i=0; i<planner.constraints.size(); i++) {
+      bool in_contact = false;
+      if (typeid(*(planner.constraints[i]))==typeid(ik_constraint2_bullet::BulletCollisionConstraint)) {
+        std::shared_ptr<ik_constraint2::CollisionConstraint> constraint = std::static_pointer_cast<ik_constraint2::CollisionConstraint>(planner.constraints[i]);
+        for (int l=0; l<contactRobotLinks.size() && !in_contact; l++) {
+          if (((constraint->A_link() == contactRobotLinks[l]) && (constraint->B_link() == contactObjectLinks[l])) ||
+              ((constraint->B_link() == contactRobotLinks[l]) && (constraint->A_link() == contactObjectLinks[l]))) {
+            removedConstraints.push_back(constraint);
+            in_contact = true;
+          }
+        }
+      }
+      if (!in_contact) param.constraints.push_back(planner.constraints[i]);
+    }
+    // 質量を修正
+    param.reachabilityConstraints.clear();
+    for (int i=0; i<reachabilityConstraints.size(); i++) {
+      if (std::find(contactRobotLinks.begin(), contactRobotLinks.end(), reachabilityConstraints[i]->A_link()) == contactRobotLinks.end()) param.reachabilityConstraints.push_back(reachabilityConstraints[i]);
     }
   }
 

@@ -27,5 +27,6 @@ namespace graph_search_wholebody_contact_planner{
                        const IKState& ikState
                        ) override;
   };
-  void convertCWCPParam(const cwcp::CWCPParam& param, const std::vector<std::pair<std::vector<double>, std::vector<std::shared_ptr<cwcp::Contact> > > >& cwcpPath, WholeBodyLocomotionContactPlanner& planner);
+  void convertParamFromCWCP(const cwcp::CWCPParam& param, const std::vector<std::pair<std::vector<double>, std::vector<std::shared_ptr<cwcp::Contact> > > >& cwcpPath, WholeBodyLocomotionContactPlanner& planner);
+  void convertDetachParamToCWCP(const WholeBodyContactPlanner& planner, const std::vector<Contact>& currentContacts, const cnoid::BodyPtr robot, const cnoid::BodyPtr object, const std::vector<std::shared_ptr<ik_constraint2_or_keep_collision::ORKeepCollisionConstraint> > reachabilityConstraints, cwcp::CWCPParam& param, std::vector<std::shared_ptr<ik_constraint2::IKConstraint> >& removedConstraints, std::vector<Contact>& stableContacts);
 }

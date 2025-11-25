@@ -13,7 +13,7 @@
 namespace graph_search_wholebody_contact_planner{
   class WholeBodyContactPlanner : public graph_search::Planner {
   public:
-    std::vector<cnoid::BodyPtr> bodies;
+    std::vector<cnoid::BodyPtr> bodies; // robotを0番目にすること
     std::vector<cnoid::LinkPtr> variables;
     std::vector<std::shared_ptr<ik_constraint2::IKConstraint> > constraints;
     std::vector<std::shared_ptr<ik_constraint2::IKConstraint> > rejections;

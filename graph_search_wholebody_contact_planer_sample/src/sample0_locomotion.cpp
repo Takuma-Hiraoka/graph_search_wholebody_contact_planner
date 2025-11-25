@@ -46,7 +46,7 @@ namespace graph_search_wholebody_contact_planner_sample{
     global_inverse_kinematics_solver::frame2Link(initialPose, param->variables);
 
     graph_search_wholebody_contact_planner::WholeBodyLocomotionContactPlanner planner;
-    graph_search_wholebody_contact_planner::convertCWCPParam(*param, keyPosePath, planner);
+    graph_search_wholebody_contact_planner::convertParamFromCWCP(*param, keyPosePath, planner);
     global_inverse_kinematics_solver::link2Frame(planner.variables, planner.currentContactState->frame);
     // planner.rejections
     std::vector<choreonoid_contact_candidate_generator::ContactCandidate> csc_;

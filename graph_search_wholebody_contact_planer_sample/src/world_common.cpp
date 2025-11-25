@@ -457,25 +457,11 @@ namespace graph_search_wholebody_contact_planner_sample{
       rootLink->addShapeNode(posTransform);
     }
     cube->setRootLink(rootLink);
+    cube->rootLink()->setJointType(cnoid::Link::JointType::FreeJoint);
     param->bodies.push_back(cube);
     // param->variables.push_back(cube->rootLink());
     cube->rootLink()->p() = cnoid::Vector3(0.7,0,1.2);
     cube->calcForwardKinematics();
     cube->calcCenterOfMass();
-
-    // collision
-    {
-      {
-        std::shared_ptr<ik_constraint2_distance_field::DistanceFieldCollisionConstraint> constraint = std::make_shared<ik_constraint2_distance_field::DistanceFieldCollisionConstraint>();
-        constraint->A_link() = cube->rootLink();
-        constraint->field() = param->field;
-        constraint->tolerance() = 0.015; // ちょうど干渉すると法線ベクトルが変になることがあるので, 1回のiterationで動きうる距離よりも大きくせよ.
-        constraint->precision() = 0.010; // 角で不正確になりがちなので, toleranceを大きくしてprecisionも大きくして、best effort的にする. precisionはdistanceFieldのサイズの倍数より大きくする. 
-        constraint->ignoreDistance() = 0.1; // 大きく動くので、ignoreも大きくする必要がある
-        //      constraint->maxError() = 0.1; // めり込んだら一刻も早く離れたい
-        constraint->updateBounds(); // キャッシュを内部に作る. キャッシュを作ったあと、10スレッドぶんコピーする方が速い
-        param->constraints.push_back(constraint);
-      }
-    }
   }
 }
