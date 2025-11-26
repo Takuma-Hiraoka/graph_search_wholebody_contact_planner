@@ -107,7 +107,7 @@ namespace graph_search_wholebody_contact_planner_sample{
     // locoPlanner.pikParam.viewer = viewer;
 
     locoPlanner.addCandidateDistance = 1.5;
-    locoPlanner.threads() = 10;
+    locoPlanner.threads() = 25;
     locoPlanner.debugLevel() = 0;
     // locoPlanner.maxExtendNum() = 1000;
 
@@ -254,6 +254,54 @@ namespace graph_search_wholebody_contact_planner_sample{
     if(!cwcp::generateKeyPose(param, cwcpMovePath, keyPoseMovePath)) std::cerr << "generateKeyPose failed" << std::endl;
     std::vector<cnoid::LinkPtr> cwcpMoveVariables = param->variables;
 
+    global_inverse_kinematics_solver::frame2Link(gsDetachPath.back().frame, param->variables);
+    graph_search_wholebody_contact_planner::convertParamFromCWCP(*param, keyPoseMovePath, locoPlanner);
+    global_inverse_kinematics_solver::link2Frame(locoPlanner.variables, locoPlanner.currentContactState->frame);
+    locoPlanner.graph().clear();
+    locoPlanner.setGoal(nullptr);
+    locoPlanner.constraints.insert(locoPlanner.constraints.end(), removedContactsDetach.begin(), removedContactsDetach.end());
+    locoPlanner.currentContactState->contacts.insert(locoPlanner.currentContactState->contacts.end(), stableContactsDetach.begin(), stableContactsDetach.end());
+    locoPlanner.addNearGuideCandidateDistance = 0.4; // 接触するdynamic contactの個数に応じて距離を変える。リンク数が減るなら多くしても良い
+
+    larmGuidedCandidates.clear();
+    locoPlanner.candidatesFromGuide(locoPlanner.bodies, locoPlanner.contactStaticCandidates, locoPlanner.guidePath, "JAXON", "LARM_JOINT7", larmGuidedCandidates);
+    rarmGuidedCandidates.clear();
+    locoPlanner.candidatesFromGuide(locoPlanner.bodies, locoPlanner.contactStaticCandidates, locoPlanner.guidePath, "JAXON", "RARM_JOINT7", rarmGuidedCandidates);
+    llegGuidedCandidates.clear();
+    locoPlanner.candidatesFromGuide(locoPlanner.bodies, locoPlanner.contactStaticCandidates, locoPlanner.guidePath, "JAXON", "LLEG_JOINT5", llegGuidedCandidates);
+    rlegGuidedCandidates.clear();
+    locoPlanner.candidatesFromGuide(locoPlanner.bodies, locoPlanner.contactStaticCandidates, locoPlanner.guidePath, "JAXON", "RLEG_JOINT5", rlegGuidedCandidates);
+
+    {
+      std::vector<cnoid::SgNodePtr> drawOnObjects;
+      cnoid::BodyPtr ccMarkers = new cnoid::Body();
+      {
+        cnoid::LinkPtr rootLink = new cnoid::Link();
+        ccMarkers->setRootLink(rootLink);
+        graph_search_wholebody_contact_planner::generateCandidateVisualLink(locoPlanner.bodies, rootLink, larmGuidedCandidates, cnoid::Vector3f(1.0, 0.0, 0.0));
+        graph_search_wholebody_contact_planner::generateCandidateVisualLink(locoPlanner.bodies, rootLink, rarmGuidedCandidates, cnoid::Vector3f(0.0, 0.0, 1.0));
+        graph_search_wholebody_contact_planner::generateCandidateVisualLink(locoPlanner.bodies, rootLink, llegGuidedCandidates, cnoid::Vector3f(0.5, 0.5, 0.0));
+        graph_search_wholebody_contact_planner::generateCandidateVisualLink(locoPlanner.bodies, rootLink, rlegGuidedCandidates, cnoid::Vector3f(0.0, 0.5, 0.5));
+      }
+      drawOnObjects.push_back(ccMarkers->rootLink()->visualShape());
+      std::vector<cnoid::SgNodePtr> csc = graph_search_wholebody_contact_planner::generateCandidateMarkers(locoPlanner.bodies, locoPlanner.contactStaticCandidates);
+      std::vector<cnoid::SgNodePtr> cdc = graph_search_wholebody_contact_planner::generateCandidateMarkers(locoPlanner.bodies, locoPlanner.contactDynamicCandidates);
+      drawOnObjects.insert(drawOnObjects.end(), csc.begin(), csc.end());
+      drawOnObjects.insert(drawOnObjects.end(), cdc.begin(), cdc.end());
+      viewer->drawOn(drawOnObjects);
+    }
+
+    viewer->drawObjects();
+
+    locoPlanner.threads() = 1;
+    locoPlanner.debugLevel() = 3;
+
+    locoPlanner.solve();
+    std::vector<cnoid::LinkPtr> gsMoveVariables = locoPlanner.variables;
+
+    std::vector<graph_search_wholebody_contact_planner::ContactState> gsMovePath;
+    locoPlanner.goalPath(gsMovePath);
+
     while (true) {
       for(int i=0;i<cwcpGoPath.size();i++){
         global_inverse_kinematics_solver::frame2Link(cwcpGoPath.at(i).first,cwcpGoVariables);
@@ -319,21 +367,6 @@ namespace graph_search_wholebody_contact_planner_sample{
           param->bodies[b]->calcForwardKinematics(false);
           param->bodies[b]->calcCenterOfMass();
         }
-        std::vector<cnoid::SgNodePtr> markers;
-        for (int j=0;j<cwcpMovePath.at(i).second.size();j++) {
-          cnoid::SgLineSetPtr lines_ = new cnoid::SgLineSet;
-          lines_->setLineWidth(8.0);
-          lines_->getOrCreateColors()->resize(1);
-          lines_->getOrCreateColors()->at(0) = cnoid::Vector3f(0.9,0.9,0.0);
-          lines_->getOrCreateVertices()->resize(2);
-          lines_->colorIndices().resize(0);
-          lines_->addLine(0,1); lines_->colorIndices().push_back(0); lines_->colorIndices().push_back(0);
-          const std::vector<cnoid::SgNodePtr>& marker = std::vector<cnoid::SgNodePtr>{lines_};
-          lines_->getOrCreateVertices()->at(0) = (cwcpMovePath.at(i).second[j]->c1.link->T() * cwcpMovePath.at(i).second[j]->c1.localPose.translation()).cast<cnoid::Vector3f::Scalar>();
-          lines_->getOrCreateVertices()->at(1) = (cwcpMovePath.at(i).second[j]->c2.localPose.translation()).cast<cnoid::Vector3f::Scalar>();
-          std::copy(marker.begin(), marker.end(), std::back_inserter(markers));
-        }
-        viewer->drawOn(markers);
         viewer->drawObjects();
         std::this_thread::sleep_for(std::chrono::milliseconds(1000));
       }
@@ -344,21 +377,25 @@ namespace graph_search_wholebody_contact_planner_sample{
           param->bodies[b]->calcForwardKinematics(false);
           param->bodies[b]->calcCenterOfMass();
         }
-        std::vector<cnoid::SgNodePtr> markers;
-        for (int j=0;j<keyPoseMovePath.at(i).second.size();j++) {
-          cnoid::SgLineSetPtr lines_ = new cnoid::SgLineSet;
-          lines_->setLineWidth(8.0);
-          lines_->getOrCreateColors()->resize(1);
-          lines_->getOrCreateColors()->at(0) = cnoid::Vector3f(0.9,0.9,0.0);
-          lines_->getOrCreateVertices()->resize(2);
-          lines_->colorIndices().resize(0);
-          lines_->addLine(0,1); lines_->colorIndices().push_back(0); lines_->colorIndices().push_back(0);
-          const std::vector<cnoid::SgNodePtr>& marker = std::vector<cnoid::SgNodePtr>{lines_};
-          lines_->getOrCreateVertices()->at(0) = (keyPoseMovePath.at(i).second[j]->c1.link->T() * keyPoseMovePath.at(i).second[j]->c1.localPose.translation()).cast<cnoid::Vector3f::Scalar>();
-          lines_->getOrCreateVertices()->at(1) = (keyPoseMovePath.at(i).second[j]->c2.localPose.translation()).cast<cnoid::Vector3f::Scalar>();
-          std::copy(marker.begin(), marker.end(), std::back_inserter(markers));
+        viewer->drawObjects();
+        std::this_thread::sleep_for(std::chrono::milliseconds(1000));
+      }
+
+      for(int i=0;i<gsMovePath.size();i++){
+        for (int j=0;j<gsMovePath[i].transition.size();j++) {
+          global_inverse_kinematics_solver::frame2Link(gsMovePath[i].transition[j], gsMoveVariables);
+          for(int b=0; b<param->bodies.size(); b++) {
+            param->bodies[b]->calcForwardKinematics(false);
+            param->bodies[b]->calcCenterOfMass();
+          }
+          viewer->drawObjects();
+          std::this_thread::sleep_for(std::chrono::milliseconds(1000 / gsMovePath[i].transition.size()));
         }
-        viewer->drawOn(markers);
+        global_inverse_kinematics_solver::frame2Link(gsMovePath[i].frame, gsMoveVariables);
+        for(int b=0; b<param->bodies.size(); b++) {
+          param->bodies[b]->calcForwardKinematics(false);
+          param->bodies[b]->calcCenterOfMass();
+        }
         viewer->drawObjects();
         std::this_thread::sleep_for(std::chrono::milliseconds(1000));
       }

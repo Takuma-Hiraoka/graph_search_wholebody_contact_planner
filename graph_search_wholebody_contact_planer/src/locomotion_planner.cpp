@@ -42,14 +42,14 @@ namespace graph_search_wholebody_contact_planner{
     return std::make_pair(diffMin, nearestIdx);
   }
 
-  inline std::pair<double, unsigned int> calcContactDiff(const std::vector<cnoid::BodyPtr>& bodies, const Contact& contact, const std::vector<std::pair<std::vector<double>, std::vector<Contact> > >& guidePath) {
+  inline std::pair<double, int> calcContactDiff(const std::vector<cnoid::BodyPtr>& bodies, const Contact& contact, const std::vector<std::pair<std::vector<double>, std::vector<Contact> > >& guidePath) {
     cnoid::Isometry3 c1Pose = contact.c1.localPose;
     cnoid::Isometry3 c2Pose = contact.c2.localPose;
     for (int b=0; b<bodies.size(); b++) {
       if ((bodies[b]->name() == contact.c1.bodyName) && bodies[b]->link(contact.c1.linkName)) c1Pose = bodies[b]->link(contact.c1.linkName)->T() * contact.c1.localPose;
       if ((bodies[b]->name() == contact.c2.bodyName) && bodies[b]->link(contact.c2.linkName)) c2Pose = bodies[b]->link(contact.c2.linkName)->T() * contact.c2.localPose;
     }
-    int nearestIdx = -1;
+    int nearestIdx = -1; // guidePathにない接触は-1で示す. objectを持った状態でのguidePath等
     double diffMin = std::numeric_limits<double>::max();
     double contactWeight = 1e1;
     for (int i=0; i<guidePath.size(); i++) {
@@ -108,7 +108,8 @@ namespace graph_search_wholebody_contact_planner{
     double diffSum = 0;
     double nearestIdxSum = 0;
     for (int i=0; i<state.contacts.size(); i++) {
-      std::pair<double, unsigned int> contactDiff = calcContactDiff(contactCheckParam->bodies, state.contacts[i], contactCheckParam->guidePath);
+      std::pair<double, int> contactDiff = calcContactDiff(contactCheckParam->bodies, state.contacts[i], contactCheckParam->guidePath);
+      if (contactDiff.second == -1) continue;
       diffSum += contactDiff.first;
       nearestIdxSum += contactDiff.second;
     }
@@ -605,6 +606,7 @@ namespace graph_search_wholebody_contact_planner{
       planner.currentContactState->contacts.push_back(graph_search_wholebody_contact_planner::Contact(c1,c2));
     }
     planner.field = param.field;
+    planner.guidePath.clear();
     planner.guidePath.resize(cwcpPath.size());
     for (int i=0; i<cwcpPath.size(); i++) {
       planner.guidePath[i].first = cwcpPath.at(i).first;
@@ -636,7 +638,7 @@ namespace graph_search_wholebody_contact_planner{
     param.goals.clear();
     param.gikParam.projectLink.clear();
     // currentContactsについて
-    // robotとobjectの接触をposition constraintを追加
+    // robotとobjectの接触をposition constraintに追加・stableContactsに追加
     // robotと、object以外の接触をcurrentContactsPointsに追加
     // robotに関与しない接触をstableContactsに追加
     std::vector<cnoid::LinkPtr> contactRobotLinks;
@@ -651,6 +653,7 @@ namespace graph_search_wholebody_contact_planner{
         constraint->B_link() = object->link(currentContacts[i].c2.linkName);
         constraint->B_localpos() = constraint->B_link()->T().inverse() * constraint->A_link()->T() * constraint->A_localpos();
         param.constraints.push_back(constraint);
+        stableContacts.push_back(currentContacts[i]);
       } else if ((currentContacts[i].c2.bodyName == robot->name()) && (currentContacts[i].c1.bodyName == object->name())) {
         contactRobotLinks.push_back(robot->link(currentContacts[i].c2.linkName));
         contactObjectLinks.push_back(object->link(currentContacts[i].c1.linkName));
@@ -660,25 +663,32 @@ namespace graph_search_wholebody_contact_planner{
         constraint->B_link() = object->link(currentContacts[i].c1.linkName);
         constraint->B_localpos() = constraint->B_link()->T().inverse() * constraint->A_link()->T() * constraint->A_localpos();
         param.constraints.push_back(constraint);
+        stableContacts.push_back(currentContacts[i]);
       } else if ((currentContacts[i].c1.bodyName == robot->name()) || (currentContacts[i].c2.bodyName == robot->name())) {
         std::shared_ptr<cwcp::Contact> contact = std::make_shared<cwcp::Contact>();
         if (currentContacts[i].c1.bodyName == robot->name()) {
           contact->c1.link = robot->link(currentContacts[i].c1.linkName);
           contact->c1.localPose = currentContacts[i].c1.localPose;
           for (int b=0; b<param.bodies.size(); b++) {
-            if (param.bodies[b]->name() == currentContacts[i].c2.bodyName) contact->c2.link = param.bodies[b]->link(currentContacts[i].c2.linkName);
+            if (param.bodies[b]->name() == currentContacts[i].c2.bodyName) {
+              contact->c2.link = param.bodies[b]->link(currentContacts[i].c2.linkName);
+              contact->c2.localPose = param.bodies[b]->link(currentContacts[i].c2.linkName)->T().inverse() * contact->c1.link->T() * contact->c1.localPose;
+            } else {
+              contact->c2.localPose = contact->c1.link->T() * contact->c1.localPose;
+            }
           }
-          contact->c2.localPose = currentContacts[i].c2.localPose;
-          contact->c2.localPose.linear() *= cnoid::rotFromRpy(0.0, M_PI, M_PI/2);
         }
         if (currentContacts[i].c2.bodyName == robot->name()) {
           contact->c1.link = robot->link(currentContacts[i].c2.linkName);
           contact->c1.localPose = currentContacts[i].c2.localPose;
           for (int b=0; b<param.bodies.size(); b++) {
-            if (param.bodies[b]->name() == currentContacts[i].c2.bodyName) contact->c2.link = param.bodies[b]->link(currentContacts[i].c1.linkName);
+            if (param.bodies[b]->name() == currentContacts[i].c2.bodyName) {
+              contact->c2.link = param.bodies[b]->link(currentContacts[i].c1.linkName);
+              contact->c2.localPose = param.bodies[b]->link(currentContacts[i].c1.linkName)->T().inverse() * contact->c1.link->T() * contact->c1.localPose;
+            } else {
+              contact->c2.localPose = contact->c1.link->T() * contact->c1.localPose;
+            }
           }
-          contact->c2.localPose = currentContacts[i].c1.localPose;
-          contact->c2.localPose.linear() *= cnoid::rotFromRpy(0.0, M_PI, M_PI/2);
         }
         param.currentContactPoints.push_back(contact);
       } else {

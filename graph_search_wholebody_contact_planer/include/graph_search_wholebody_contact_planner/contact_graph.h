@@ -34,7 +34,7 @@ namespace graph_search_wholebody_contact_planner{
       gikParam.pikParam.calcVelocity = false;
       gikParam.delta = 0.1; // この距離内のstateは、中間のconstraintチェック無しで遷移可能. stateごとの距離がこの距離以内だとそもそも同じstateとみなされてあたらしくstateを作らない. 足を浮かせるとき等はstateが大きく変化しないので、deltaも小さくしておかないとstateが増えない.
       gikParam.projectCellSize = 0.4;
-      gikParam.threads = 3;
+      gikParam.threads = 1;
       gikParam.timeout = 1.0;
       gikParam.goalBias = 0.2;
       gikParam.pikParam.we = 1e2; // 逆運動学が振動しないこと優先. 1e0だと不安定. 1e3だと大きすぎる
