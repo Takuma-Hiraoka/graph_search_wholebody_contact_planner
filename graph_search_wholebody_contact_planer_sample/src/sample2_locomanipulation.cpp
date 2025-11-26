@@ -293,9 +293,6 @@ namespace graph_search_wholebody_contact_planner_sample{
 
     viewer->drawObjects();
 
-    locoPlanner.threads() = 1;
-    locoPlanner.debugLevel() = 3;
-
     locoPlanner.solve();
     std::vector<cnoid::LinkPtr> gsMoveVariables = locoPlanner.variables;
 

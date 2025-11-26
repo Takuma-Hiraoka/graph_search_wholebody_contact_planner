@@ -8,12 +8,14 @@ namespace graph_search_wholebody_contact_planner{
   public:
     double addNearGuideCandidateDistance = 0.2;
     std::vector<std::pair<std::vector<double>, std::vector<Contact> > > guidePath; // ガイドパスのframeはリンクとvariableは順番・個数が同じ前提
+    std::string targetBodyName;
 
   public:
     class LocomotionContactTransitionCheckParam : public graph_search_wholebody_contact_planner::WholeBodyContactPlanner::ContactTransitionCheckParam {
     public:
       double addNearGuideCandidateDistance = 0.2;
       std::vector<std::pair<std::vector<double>, std::vector<Contact> > > guidePath;
+      std::string targetBodyName;
     };
     std::shared_ptr<graph_search::Planner::TransitionCheckParam> generateCheckParam() override;
     void cloneCheckParam(std::shared_ptr<ContactTransitionCheckParam> checkParam) override;

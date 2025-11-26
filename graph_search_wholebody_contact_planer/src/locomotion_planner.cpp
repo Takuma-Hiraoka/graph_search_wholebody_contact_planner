@@ -15,31 +15,7 @@ namespace graph_search_wholebody_contact_planner{
     WholeBodyContactPlanner::cloneCheckParam(contactCheckParam);
     contactCheckParam->guidePath = this->guidePath;
     contactCheckParam->addNearGuideCandidateDistance = this->addNearGuideCandidateDistance;
-  }
-
-  inline std::pair<double, unsigned int> calcRootDiff(const std::vector<cnoid::LinkPtr>& variables, const ContactState& state, const std::vector<std::pair<std::vector<double>, std::vector<Contact> > >& guidePath) {
-    int nearestIdx = -1;
-    double diffMin = std::numeric_limits<double>::max();
-    double rootWeight = 1e2;
-    for (int i=1; i<guidePath.size(); i++) {
-      double diff = 0;
-      unsigned int idx=0;
-      for (int l=0; l<variables.size(); l++) {
-        if (variables[l]->isRevoluteJoint() || variables[l]->isPrismaticJoint()) {
-          //diff += std::abs(state.frame[idx] - guidePath[i].first[idx]);
-          idx+=1;
-        } else if (variables[l]->isFreeJoint()) {
-          diff += (cnoid::Vector3(state.frame[idx+0], state.frame[idx+1], state.frame[idx+2]) - cnoid::Vector3(guidePath[i].first[idx+0], guidePath[i].first[idx+1], guidePath[i].first[idx+2])).norm() * rootWeight;
-          // diff += std::abs(cnoid::AngleAxis(cnoid::Quaternion(state.frame[idx+6],state.frame[idx+3],state.frame[idx+4],state.frame[idx+5]).toRotationMatrix().transpose() * cnoid::Quaternion(guidePath[i].first[idx+6],guidePath[i].first[idx+3],guidePath[i].first[idx+4],guidePath[i].first[idx+5]).toRotationMatrix()).angle()) * 1e1;
-          idx+=7;
-        }
-      }
-      if (diff < diffMin) {
-        diffMin = diff;
-        nearestIdx = i;
-      }
-    }
-    return std::make_pair(diffMin, nearestIdx);
+    contactCheckParam->targetBodyName = this->targetBodyName;
   }
 
   inline std::pair<double, int> calcContactDiff(const std::vector<cnoid::BodyPtr>& bodies, const Contact& contact, const std::vector<std::pair<std::vector<double>, std::vector<Contact> > >& guidePath) {
@@ -89,7 +65,7 @@ namespace graph_search_wholebody_contact_planner{
         //diff += std::abs(state.frame[idx] - guidePath[i].first[idx]);
         idx+=1;
       } else if (contactCheckParam->variables[l]->isFreeJoint()) {
-        diff += (cnoid::Vector3(state.frame[idx+0], state.frame[idx+1], state.frame[idx+2]) - cnoid::Vector3(contactCheckParam->guidePath.back().first[idx+0], contactCheckParam->guidePath.back().first[idx+1], contactCheckParam->guidePath.back().first[idx+2])).norm() * rootWeight;
+        if (variables[l]->body()->name() == contactCheckParam->targetBodyName) diff += (cnoid::Vector3(state.frame[idx+0], state.frame[idx+1], state.frame[idx+2]) - cnoid::Vector3(contactCheckParam->guidePath.back().first[idx+0], contactCheckParam->guidePath.back().first[idx+1], contactCheckParam->guidePath.back().first[idx+2])).norm() * rootWeight;
         // diff += std::abs(cnoid::AngleAxis(cnoid::Quaternion(state.frame[idx+6],state.frame[idx+3],state.frame[idx+4],state.frame[idx+5]).toRotationMatrix().transpose() * cnoid::Quaternion(contactCheckParam->guidePath.back().first[idx+6],contactCheckParam->guidePath.back().first[idx+3],contactCheckParam->guidePath.back().first[idx+4],contactCheckParam->guidePath.back().first[idx+5]).toRotationMatrix()).angle()) * 1e1;
         idx+=7;
       }
@@ -399,7 +375,8 @@ namespace graph_search_wholebody_contact_planner{
         pose.translation() = cnoid::Vector3(contactCheckParam->guidePath[targetLevel].first[nominalIdx+0], contactCheckParam->guidePath[targetLevel].first[nominalIdx+1], contactCheckParam->guidePath[targetLevel].first[nominalIdx+2]);
         pose.linear() = cnoid::Quaternion(contactCheckParam->guidePath[targetLevel].first[nominalIdx+6], contactCheckParam->guidePath[targetLevel].first[nominalIdx+3], contactCheckParam->guidePath[targetLevel].first[nominalIdx+4], contactCheckParam->guidePath[targetLevel].first[nominalIdx+5]).toRotationMatrix();
         constraint->B_localpos() = pose;
-        constraint->weight() << 10.0, 10.0, 10.0, 1.0, 1.0, 1.0;
+        if (variables[i]->body()->name() == contactCheckParam->targetBodyName) constraint->weight() << 10.0, 10.0, 10.0, 1.0, 1.0, 1.0;
+        else constraint->weight() << 1.0, 1.0, 1.0, 1.0, 1.0, 1.0;
         constraint->precision() = 1e10; // always satisfied
         nominals.push_back(constraint);
         nominalIdx += 7;
@@ -408,6 +385,7 @@ namespace graph_search_wholebody_contact_planner{
 
     for (int i=0;i<scfrConstraints.size();i++) {
       if (scfrConstraints[i]->poses().size() == 0) return false; // 接触が存在しない物体がある.
+      if (!ik_constraint2_keep_collision_scfr::checkSCFRExistance(scfrConstraints[i]->poses(), scfrConstraints[i]->As(), scfrConstraints[i]->bs(), scfrConstraints[i]->Cs(), scfrConstraints[i]->dls(), scfrConstraints[i]->dus(), scfrConstraints[i]->A_robot()->mass(), scfrConstraints[i]->SCFRParam())) return false; // scfrが消えている
       constraints0.push_back(scfrConstraints[i]);
     }
 
@@ -626,6 +604,7 @@ namespace graph_search_wholebody_contact_planner{
         planner.guidePath[i].second.push_back(Contact(c1, c2));
       }
     }
+    planner.targetBodyName = param.projectLink->body()->name();
   }
 
   void convertDetachParamToCWCP(const WholeBodyContactPlanner& planner, const std::vector<Contact>& currentContacts, const cnoid::BodyPtr robot, const cnoid::BodyPtr object, const std::vector<std::shared_ptr<ik_constraint2_or_keep_collision::ORKeepCollisionConstraint> > reachabilityConstraints, cwcp::CWCPParam& param, std::vector<std::shared_ptr<ik_constraint2::IKConstraint> >& removedConstraints, std::vector<Contact>& stableContacts) {
