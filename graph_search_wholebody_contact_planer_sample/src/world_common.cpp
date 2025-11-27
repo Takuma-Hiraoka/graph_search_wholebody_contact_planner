@@ -304,19 +304,19 @@ namespace graph_search_wholebody_contact_planner_sample{
         //   posTransform->addChild(shape);
         //   rootLink->addShapeNode(posTransform);
         // }
-        {
-          cnoid::SgShapePtr shape = new cnoid::SgShape();
-          shape->setMesh(meshGenerator.generateCylinder(0.1, 0.9));
-          cnoid::SgMaterialPtr material = new cnoid::SgMaterial();
-          material->setTransparency(0);
-          material->setDiffuseColor(cnoid::Vector3f(0.6,0.6,0.6));
-          shape->setMaterial(material);
-          cnoid::SgPosTransformPtr posTransform = new cnoid::SgPosTransform();
-          posTransform->translation() = cnoid::Vector3(-0.7,0,0.45);
-          posTransform->rotation() = cnoid::rotFromRpy(M_PI /2, 0, 0);
-          posTransform->addChild(shape);
-          rootLink->addShapeNode(posTransform);
-        }
+        // {
+        //   cnoid::SgShapePtr shape = new cnoid::SgShape();
+        //   shape->setMesh(meshGenerator.generateCylinder(0.1, 0.9));
+        //   cnoid::SgMaterialPtr material = new cnoid::SgMaterial();
+        //   material->setTransparency(0);
+        //   material->setDiffuseColor(cnoid::Vector3f(0.6,0.6,0.6));
+        //   shape->setMaterial(material);
+        //   cnoid::SgPosTransformPtr posTransform = new cnoid::SgPosTransform();
+        //   posTransform->translation() = cnoid::Vector3(-0.7,0,0.45);
+        //   posTransform->rotation() = cnoid::rotFromRpy(M_PI /2, 0, 0);
+        //   posTransform->addChild(shape);
+        //   rootLink->addShapeNode(posTransform);
+        // }
         {
           cnoid::SgShapePtr shape = new cnoid::SgShape();
           shape->setMesh(meshGenerator.generateCylinder(0.1, 0.9));
@@ -392,7 +392,7 @@ namespace graph_search_wholebody_contact_planner_sample{
                                                                                                  5,//size_y
                                                                                                  5,//size_z
                                                                                                  0.02,//resolution // constratintのtoleranceよりも小さい必要がある.
-                                                                                                 -1.5,//origin_x
+                                                                                                 -2.5,//origin_x
                                                                                                  -2.5,//origin_y
                                                                                                  -0.5,//origin_z
                                                                                                  0.5, // max_distance

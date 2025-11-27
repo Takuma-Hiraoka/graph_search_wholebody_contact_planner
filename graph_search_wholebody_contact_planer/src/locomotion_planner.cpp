@@ -71,7 +71,7 @@ namespace graph_search_wholebody_contact_planner{
       }
     }
 
-    std::cerr << "diff " << diff << std::endl;
+    // std::cerr << "diff " << diff << std::endl;
     return diff < 1e1;
   }
 
@@ -83,16 +83,22 @@ namespace graph_search_wholebody_contact_planner{
     if (state.frame.size() != contactCheckParam->guidePath[0].first.size()) std::cerr << "[WholeBodyLocomotionContactPlanner] error! state.frame.size() and contactCheckParam.guidePath[0].size() are mismatched!" << std::endl;
     double diffSum = 0;
     double nearestIdxSum = 0;
+    int count = 0;
     for (int i=0; i<state.contacts.size(); i++) {
       std::pair<double, int> contactDiff = calcContactDiff(contactCheckParam->bodies, state.contacts[i], contactCheckParam->guidePath);
       if (contactDiff.second == -1) continue;
       diffSum += contactDiff.first;
       nearestIdxSum += contactDiff.second;
+      count++;
     }
-    double nearestIdx = (nearestIdxSum / state.contacts.size());
+    if (count == 0) node->heuristic() = contactCheckParam->guidePath.size() * 1e3; // ガイドパスに出てくる接触がない. objectを持つ接触だけ等. robotのSCFRがないので実行不可.
+    else {
+      double nearestIdx = (nearestIdxSum / count);
 
-    std::static_pointer_cast<ContactNode>(node)->level() = (unsigned int)nearestIdx;
-    node->heuristic() = (contactCheckParam->guidePath.size() - 1 - nearestIdx) * 1e3 + diffSum;
+      std::cerr << "path size " << contactCheckParam->guidePath.size() << " nearestIdx : " << nearestIdx << std::endl;
+      std::static_pointer_cast<ContactNode>(node)->level() = (unsigned int)nearestIdx;
+      node->heuristic() = (contactCheckParam->guidePath.size() - 1 - nearestIdx) * 1e3 + diffSum;
+    }
   }
 
   std::vector<std::shared_ptr<graph_search::Node> > WholeBodyLocomotionContactPlanner::gatherAdjacentNodes(std::shared_ptr<graph_search::Planner::TransitionCheckParam> checkParam) {
@@ -661,7 +667,7 @@ namespace graph_search_wholebody_contact_planner{
           contact->c1.link = robot->link(currentContacts[i].c2.linkName);
           contact->c1.localPose = currentContacts[i].c2.localPose;
           for (int b=0; b<param.bodies.size(); b++) {
-            if (param.bodies[b]->name() == currentContacts[i].c2.bodyName) {
+            if (param.bodies[b]->name() == currentContacts[i].c1.bodyName) {
               contact->c2.link = param.bodies[b]->link(currentContacts[i].c1.linkName);
               contact->c2.localPose = param.bodies[b]->link(currentContacts[i].c1.linkName)->T().inverse() * contact->c1.link->T() * contact->c1.localPose;
             } else {

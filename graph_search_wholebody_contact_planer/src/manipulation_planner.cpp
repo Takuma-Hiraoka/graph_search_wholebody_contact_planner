@@ -2,6 +2,7 @@
 #include <ik_constraint2_scfr/ik_constraint2_scfr.h>
 #include <limits>
 #include <random>
+#include <set>
 
 namespace graph_search_wholebody_contact_planner{
   std::shared_ptr<graph_search::Planner::TransitionCheckParam> WholeBodyManipulationContactPlanner::generateCheckParam() {
@@ -238,6 +239,15 @@ namespace graph_search_wholebody_contact_planner{
       }
     }
 
+    std::set<std::string> contactLinkOfRobot;
+    for (int i=0; i<contactCheckParam->contactDynamicCandidates.size(); i++) {
+      if (contactCheckParam->contactDynamicCandidates[i]->bodyName == contactCheckParam->bodies[0]->name()) contactLinkOfRobot.insert(contactCheckParam->contactDynamicCandidates[i]->linkName);
+    }
+    int numContactLink = contactLinkOfRobot.size();
+    int numObjectContact = 0;
+    for (int i=0; i<extend_state.contacts.size(); i++) {
+      if (!extend_state.contacts[i].c1.isStatic && !extend_state.contacts[i].c2.isStatic) numObjectContact++; // !isStatic同士の接触はrobotとobjectだけという仮定がある.
+    }
     // dynamic contact
     std::vector<std::shared_ptr<ContactCandidate> > contactDynamicCandidatesBuf;
     for (int i=0; i<contactCheckParam->contactDynamicCandidates.size(); i++) {
@@ -261,6 +271,11 @@ namespace graph_search_wholebody_contact_planner{
         // 同じBody内の候補同士は接触できない
         // TODO Link内にする?
         if ((contactDynamicCandidatesBuf[i]->bodyName == contactDynamicCandidatesBuf[j]->bodyName)/* && (contactDynamicCandidatesBuf[i]->linkName == contactDynamicCandidatesBuf[j]->linkName)*/) continue;
+        // robotの接触候補link数 - robotとobjectとの接触 が2以上になるようにする. その後動いたりするため
+        // -->robotとobjectとの接触はrobotの接触候補link数 - robotとobjectとの接触が2以下のときは新たにrobotとobjectの接触を追加しない
+        if ((((contactDynamicCandidatesBuf[i]->bodyName == contactCheckParam->bodies[0]->name()) && !contactDynamicCandidatesBuf[j]->isStatic) ||
+             ((contactDynamicCandidatesBuf[j]->bodyName == contactCheckParam->bodies[0]->name()) && !contactDynamicCandidatesBuf[i]->isStatic)) &&
+            (numContactLink - numObjectContact <= 2)) continue;
         cnoid::Vector3 rootPos2;
         for (int b=0; b<contactCheckParam->bodies.size(); b++) {
           if ((contactCheckParam->bodies[b]->name() == contactDynamicCandidatesBuf[j]->bodyName) && contactCheckParam->bodies[b]->joint(contactDynamicCandidatesBuf[j]->linkName)) rootPos2 = contactCheckParam->bodies[b]->rootLink()->p();

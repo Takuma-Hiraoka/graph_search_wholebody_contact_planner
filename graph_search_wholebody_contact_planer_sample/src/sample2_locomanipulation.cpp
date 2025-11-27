@@ -21,6 +21,21 @@ namespace graph_search_wholebody_contact_planner_sample{
     std::vector<double> initialPose;
     global_inverse_kinematics_solver::link2Frame(param->variables, initialPose);
     cube->rootLink()->setJointType(cnoid::Link::JointType::FixedJoint); // manipPlannerにおいて今回動かすobjectのみFreeJointとし、他ではFixedにすること
+    std::vector<cnoid::LinkPtr> cwcpGoVariables;
+    std::vector<cnoid::LinkPtr> gsGoVariables;
+    std::vector<cnoid::LinkPtr> gsDetachVariables;
+    std::vector<cnoid::LinkPtr> cwcpMoveVariables;
+    std::vector<cnoid::LinkPtr> gsMoveVariables;
+    std::vector<cnoid::LinkPtr> gsAttachVariables;
+
+    std::vector<std::pair<std::vector<double>, std::vector<std::shared_ptr<cwcp::Contact> > > > cwcpGoPath;
+    std::vector<std::pair<std::vector<double>, std::vector<std::shared_ptr<cwcp::Contact> > > > keyPoseGoPath;
+    std::vector<graph_search_wholebody_contact_planner::ContactState> gsGoPath;
+    std::vector<graph_search_wholebody_contact_planner::ContactState> gsDetachPath;
+    std::vector<std::pair<std::vector<double>, std::vector<std::shared_ptr<cwcp::Contact> > > > cwcpMovePath;
+    std::vector<std::pair<std::vector<double>, std::vector<std::shared_ptr<cwcp::Contact> > > > keyPoseMovePath;
+    std::vector<graph_search_wholebody_contact_planner::ContactState> gsMovePath;
+    std::vector<graph_search_wholebody_contact_planner::ContactState> gsAttachPath;
     // goal
     {
       std::shared_ptr<ik_constraint2::PositionConstraint> constraint = std::make_shared<ik_constraint2::PositionConstraint>();
@@ -31,8 +46,8 @@ namespace graph_search_wholebody_contact_planner_sample{
       param->goals.push_back(constraint);
     }
 
-    param->gikParam.range = 0.5;
-    param->gikParam.delta = 0.45;
+    // param->gikParam.range = 0.5;
+    // param->gikParam.delta = 0.45;
     param->gikParam.goalBias = 0.8;
     param->gikParam.timeout = 60;
     param->gikParam.threads = 20;
@@ -47,14 +62,12 @@ namespace graph_search_wholebody_contact_planner_sample{
     viewer->drawObjects();
 
     // param->pikParam.debugLevel = 3;
-    // param->pikParam.viewMilliseconds = -1;
-    // param->pikParam.viewer = viewer;
+    param->pikParam.viewMilliseconds = -1;
+    param->pikParam.viewer = viewer;
 
-    std::vector<std::pair<std::vector<double>, std::vector<std::shared_ptr<cwcp::Contact> > > > cwcpGoPath;
     if(!cwcp::solveCWCP(param, cwcpGoPath)) std::cerr << "solveCWCP failed" << std::endl;
-    std::vector<std::pair<std::vector<double>, std::vector<std::shared_ptr<cwcp::Contact> > > > keyPoseGoPath;
     if(!cwcp::generateKeyPose(param, cwcpGoPath, keyPoseGoPath)) std::cerr << "generateKeyPose failed" << std::endl;
-    std::vector<cnoid::LinkPtr> cwcpGoVariables = param->variables;
+    cwcpGoVariables = param->variables;
 
     global_inverse_kinematics_solver::frame2Link(initialPose, param->variables);
 
@@ -107,14 +120,13 @@ namespace graph_search_wholebody_contact_planner_sample{
     // locoPlanner.pikParam.viewer = viewer;
 
     locoPlanner.addCandidateDistance = 1.5;
-    locoPlanner.threads() = 25;
+    locoPlanner.threads() = 10;
     locoPlanner.debugLevel() = 0;
     // locoPlanner.maxExtendNum() = 1000;
 
     locoPlanner.solve();
-    std::vector<cnoid::LinkPtr> gsGoVariables = locoPlanner.variables;
+    gsGoVariables = locoPlanner.variables;
 
-    std::vector<graph_search_wholebody_contact_planner::ContactState> gsGoPath;
     locoPlanner.goalPath(gsGoPath);
 
     std::cerr << "Go to cube OK" << std::endl;
@@ -223,8 +235,7 @@ namespace graph_search_wholebody_contact_planner_sample{
     if (manipPlanner.solve()) std::cerr << "detach solved" << std::endl;
     else std::cerr << "detach failed" << std::endl;
 
-    std::vector<cnoid::LinkPtr> gsDetachVariables = manipPlanner.variables;
-    std::vector<graph_search_wholebody_contact_planner::ContactState> gsDetachPath;
+    gsDetachVariables = manipPlanner.variables;
     manipPlanner.goalPath(gsDetachPath);
 
     global_inverse_kinematics_solver::frame2Link(gsDetachPath.back().frame, manipPlanner.variables);
@@ -248,11 +259,11 @@ namespace graph_search_wholebody_contact_planner_sample{
     }
     param->projectLink = cube->rootLink();
     param->gikParam.goalBias = 0.4;
-    std::vector<std::pair<std::vector<double>, std::vector<std::shared_ptr<cwcp::Contact> > > > cwcpMovePath;
+    param->debugLevel = 1;
     if(!cwcp::solveCWCP(param, cwcpMovePath)) std::cerr << "solveCWCP failed" << std::endl;
-    std::vector<std::pair<std::vector<double>, std::vector<std::shared_ptr<cwcp::Contact> > > > keyPoseMovePath;
+    if (cwcpMovePath.size() > 0) {
     if(!cwcp::generateKeyPose(param, cwcpMovePath, keyPoseMovePath)) std::cerr << "generateKeyPose failed" << std::endl;
-    std::vector<cnoid::LinkPtr> cwcpMoveVariables = param->variables;
+    cwcpMoveVariables = param->variables;
 
     global_inverse_kinematics_solver::frame2Link(gsDetachPath.back().frame, param->variables);
     graph_search_wholebody_contact_planner::convertParamFromCWCP(*param, keyPoseMovePath, locoPlanner);
@@ -261,7 +272,7 @@ namespace graph_search_wholebody_contact_planner_sample{
     locoPlanner.setGoal(nullptr);
     locoPlanner.constraints.insert(locoPlanner.constraints.end(), removedContactsDetach.begin(), removedContactsDetach.end());
     locoPlanner.currentContactState->contacts.insert(locoPlanner.currentContactState->contacts.end(), stableContactsDetach.begin(), stableContactsDetach.end());
-    locoPlanner.addNearGuideCandidateDistance = 0.4; // 接触するdynamic contactの個数に応じて距離を変える。リンク数が減るなら多くしても良い
+    locoPlanner.addNearGuideCandidateDistance = 0.3; // 接触するdynamic contactの個数に応じて距離を変える。リンク数が減るなら多くしても良い
 
     larmGuidedCandidates.clear();
     locoPlanner.candidatesFromGuide(locoPlanner.bodies, locoPlanner.contactStaticCandidates, locoPlanner.guidePath, "JAXON", "LARM_JOINT7", larmGuidedCandidates);
@@ -294,32 +305,52 @@ namespace graph_search_wholebody_contact_planner_sample{
     viewer->drawObjects();
 
     locoPlanner.solve();
-    std::vector<cnoid::LinkPtr> gsMoveVariables = locoPlanner.variables;
+    gsMoveVariables = locoPlanner.variables;
 
-    std::vector<graph_search_wholebody_contact_planner::ContactState> gsMovePath;
     locoPlanner.goalPath(gsMovePath);
 
+    manipPlanner.graph().clear();
+    manipPlanner.setGoal(nullptr);
+    manipPlanner.currentContactState = std::make_shared<graph_search_wholebody_contact_planner::ContactState>(gsMovePath.back());
+    global_inverse_kinematics_solver::link2Frame(manipPlanner.variables, manipPlanner.currentContactState->frame);
+    // 現在触れているかどうかの判定にはlocalPoseを用いるが、currentContactで接触点探索が行われている場合localPoseが変わっている。このため、currentContactに含まれる、ロボットのDynamicCandidateのlocalPoseはcurrentContactのものにする
+    for (int i=0; i<manipPlanner.currentContactState->contacts.size(); i++) {
+      if(manipPlanner.currentContactState->contacts[i].c1.bodyName == robot->name()) {
+        for (int j=0; j<manipPlanner.contactDynamicCandidates.size(); j++) {
+          if ((manipPlanner.contactDynamicCandidates[j]->bodyName == manipPlanner.currentContactState->contacts[i].c1.bodyName) && (manipPlanner.contactDynamicCandidates[j]->linkName == manipPlanner.currentContactState->contacts[i].c1.linkName)) {
+            manipPlanner.contactDynamicCandidates[j]->localPose = manipPlanner.currentContactState->contacts[i].c1.localPose;
+          }
+        }
+      }
+      if(manipPlanner.currentContactState->contacts[i].c2.bodyName == robot->name()) {
+        for (int j=0; j<manipPlanner.contactDynamicCandidates.size(); j++) {
+          if ((manipPlanner.contactDynamicCandidates[j]->bodyName == manipPlanner.currentContactState->contacts[i].c2.bodyName) && (manipPlanner.contactDynamicCandidates[j]->linkName == manipPlanner.currentContactState->contacts[i].c2.linkName)) {
+            manipPlanner.contactDynamicCandidates[j]->localPose = manipPlanner.currentContactState->contacts[i].c2.localPose;
+          }
+        }
+      }
+    }
+    // Goal
+    {
+      graph_search_wholebody_contact_planner::ContactCandidate c1;
+      c1.bodyName = cube->name();
+      c1.linkName = "cube";
+      c1.isStatic = false;
+      graph_search_wholebody_contact_planner::ContactCandidate c2;
+      c2.bodyName = "floor";
+      c2.linkName = "table1";
+      c2.isStatic = true;
+      manipPlanner.targetContact = std::make_pair(graph_search_wholebody_contact_planner::Contact(c1,c2), true);
+    }
+    if (manipPlanner.solve()) std::cerr << "attach solved" << std::endl;
+    else std::cerr << "attach failed" << std::endl;
+
+    }
+    gsAttachVariables = manipPlanner.variables;
+
+    manipPlanner.goalPath(gsAttachPath);
+
     while (true) {
-      for(int i=0;i<cwcpGoPath.size();i++){
-        global_inverse_kinematics_solver::frame2Link(cwcpGoPath.at(i).first,cwcpGoVariables);
-        for(int b=0; b<param->bodies.size(); b++) {
-          param->bodies[b]->calcForwardKinematics(false);
-          param->bodies[b]->calcCenterOfMass();
-        }
-        viewer->drawObjects();
-        std::this_thread::sleep_for(std::chrono::milliseconds(200));
-      }
-
-      for(int i=0;i<keyPoseGoPath.size();i++){
-        global_inverse_kinematics_solver::frame2Link(keyPoseGoPath.at(i).first,cwcpGoVariables);
-        for(int b=0; b<param->bodies.size(); b++) {
-          param->bodies[b]->calcForwardKinematics(false);
-          param->bodies[b]->calcCenterOfMass();
-        }
-        viewer->drawObjects();
-        std::this_thread::sleep_for(std::chrono::milliseconds(200));
-      }
-
       for(int i=0;i<gsGoPath.size();i++){
         for (int j=0;j<gsGoPath[i].transition.size();j++) {
           global_inverse_kinematics_solver::frame2Link(gsGoPath[i].transition[j], gsGoVariables);
@@ -358,26 +389,6 @@ namespace graph_search_wholebody_contact_planner_sample{
         std::this_thread::sleep_for(std::chrono::milliseconds(1000));
       }
 
-      for(int i=0;i<cwcpMovePath.size();i++){
-        global_inverse_kinematics_solver::frame2Link(cwcpMovePath.at(i).first,cwcpMoveVariables);
-        for(int b=0; b<param->bodies.size(); b++) {
-          param->bodies[b]->calcForwardKinematics(false);
-          param->bodies[b]->calcCenterOfMass();
-        }
-        viewer->drawObjects();
-        std::this_thread::sleep_for(std::chrono::milliseconds(1000));
-      }
-
-      for(int i=0;i<keyPoseMovePath.size();i++){
-        global_inverse_kinematics_solver::frame2Link(keyPoseMovePath.at(i).first,cwcpMoveVariables);
-        for(int b=0; b<param->bodies.size(); b++) {
-          param->bodies[b]->calcForwardKinematics(false);
-          param->bodies[b]->calcCenterOfMass();
-        }
-        viewer->drawObjects();
-        std::this_thread::sleep_for(std::chrono::milliseconds(1000));
-      }
-
       for(int i=0;i<gsMovePath.size();i++){
         for (int j=0;j<gsMovePath[i].transition.size();j++) {
           global_inverse_kinematics_solver::frame2Link(gsMovePath[i].transition[j], gsMoveVariables);
@@ -389,6 +400,25 @@ namespace graph_search_wholebody_contact_planner_sample{
           std::this_thread::sleep_for(std::chrono::milliseconds(1000 / gsMovePath[i].transition.size()));
         }
         global_inverse_kinematics_solver::frame2Link(gsMovePath[i].frame, gsMoveVariables);
+        for(int b=0; b<param->bodies.size(); b++) {
+          param->bodies[b]->calcForwardKinematics(false);
+          param->bodies[b]->calcCenterOfMass();
+        }
+        viewer->drawObjects();
+        std::this_thread::sleep_for(std::chrono::milliseconds(1000));
+      }
+
+      for(int i=0;i<gsAttachPath.size();i++){
+        for (int j=0;j<gsAttachPath[i].transition.size();j++) {
+          global_inverse_kinematics_solver::frame2Link(gsAttachPath[i].transition[j], gsAttachVariables);
+          for(int b=0; b<param->bodies.size(); b++) {
+            param->bodies[b]->calcForwardKinematics(false);
+            param->bodies[b]->calcCenterOfMass();
+          }
+          viewer->drawObjects();
+          std::this_thread::sleep_for(std::chrono::milliseconds(1000 / gsAttachPath[i].transition.size()));
+        }
+        global_inverse_kinematics_solver::frame2Link(gsAttachPath[i].frame, gsAttachVariables);
         for(int b=0; b<param->bodies.size(); b++) {
           param->bodies[b]->calcForwardKinematics(false);
           param->bodies[b]->calcCenterOfMass();
