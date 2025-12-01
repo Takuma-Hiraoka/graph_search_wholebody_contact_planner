@@ -274,7 +274,7 @@ namespace graph_search_wholebody_contact_planner_sample{
     locoPlanner.setGoal(nullptr);
     locoPlanner.constraints.insert(locoPlanner.constraints.end(), removedContactsDetach.begin(), removedContactsDetach.end());
     locoPlanner.currentContactState->contacts.insert(locoPlanner.currentContactState->contacts.end(), stableContactsDetach.begin(), stableContactsDetach.end());
-    locoPlanner.addNearGuideCandidateDistance = 0.3; // 接触するdynamic contactの個数に応じて距離を変える。リンク数が減るなら多くしても良い
+    locoPlanner.addNearGuideCandidateDistance = 0.5; // 接触するdynamic contactの個数に応じて距離を変える。リンク数が減るなら多くしても良い
 
     larmGuidedCandidates.clear();
     locoPlanner.candidatesFromGuide(locoPlanner.bodies, locoPlanner.contactStaticCandidates, locoPlanner.guidePath, "JAXON", "LARM_JOINT7", larmGuidedCandidates);
@@ -306,8 +306,7 @@ namespace graph_search_wholebody_contact_planner_sample{
 
     viewer->drawObjects();
     locoPlanner.debugLevel() = 3;
-    locoPlanner.threads() = 1;
-    locoPlanner.addNearGuideCandidateDistance = 0.5;
+    locoPlanner.threads() = 10;
     locoPlanner.solve();
     gsMoveVariables = locoPlanner.variables;
 
@@ -316,7 +315,12 @@ namespace graph_search_wholebody_contact_planner_sample{
     manipPlanner.graph().clear();
     manipPlanner.setGoal(nullptr);
     manipPlanner.currentContactState = std::make_shared<graph_search_wholebody_contact_planner::ContactState>(gsMovePath.back());
-    global_inverse_kinematics_solver::link2Frame(manipPlanner.variables, manipPlanner.currentContactState->frame);
+    manipPlanner.currentContactState->transition.clear();
+    global_inverse_kinematics_solver::frame2Link(gsMovePath.back().frame, manipPlanner.variables);
+    for(int b=0; b<param->bodies.size(); b++) {
+      param->bodies[b]->calcForwardKinematics(false);
+      param->bodies[b]->calcCenterOfMass();
+    }
     // 現在触れているかどうかの判定にはlocalPoseを用いるが、currentContactで接触点探索が行われている場合localPoseが変わっている。このため、currentContactに含まれる、ロボットのDynamicCandidateのlocalPoseはcurrentContactのものにする
     for (int i=0; i<manipPlanner.currentContactState->contacts.size(); i++) {
       if(manipPlanner.currentContactState->contacts[i].c1.bodyName == robot->name()) {
