@@ -61,7 +61,7 @@ namespace graph_search_wholebody_contact_planner{
       if (!detach) {
         heuristic += nSatisfy;
         heuristic += state.contacts.size() * contactWeight;
-        // TODO detachが可能になる（SCFRが存在するようになる）ときに良く
+        // detachが可能になる（SCFRが存在するようになる）ときに良く
         // targetContactに関係するbodyのみ
         // targetContactに関係するbodyは既にfixed bodyとkinematics tree上で連結しているという仮定
         // すなわち、targetContact側のbody及びlinkは不動

@@ -217,7 +217,7 @@ namespace graph_search_wholebody_contact_planner_sample{
       c2.bodyName = "floor";
       c2.linkName = "table2";
       c2.isStatic = true;
-      c2.localPose.translation() = cnoid::Vector3(0.7, 0.0, 1.2);
+      c2.localPose.translation() = cnoid::Vector3(0.7, 0.0, 1.0);
       c2.localPose.linear() = cnoid::rotFromRpy(0.0, M_PI, M_PI/2);
       manipPlanner.targetContact = std::make_pair(graph_search_wholebody_contact_planner::Contact(c1,c2), false);
     }
@@ -252,14 +252,16 @@ namespace graph_search_wholebody_contact_planner_sample{
     {
       std::shared_ptr<ik_constraint2::PositionConstraint> constraint = std::make_shared<ik_constraint2::PositionConstraint>();
       constraint->A_link() = cube->rootLink();
-      constraint->B_localpos().translation() = cnoid::Vector3(-0.7,0,1.0-0.05);
+      // constraint->B_localpos().translation() = cnoid::Vector3(-0.7,0,1.0-0.05);
+      constraint->B_localpos().translation() = cnoid::Vector3(0,0.7,1.0-0.05);
       constraint->weight() << 1.0, 1.0, 1.0, 0.0, 0.0, 0.0;
       constraint->precision() = 0.4;
       param->goals.push_back(constraint);
     }
     param->projectLink = cube->rootLink();
     param->gikParam.goalBias = 0.4;
-    param->debugLevel = 1;
+    param->debugLevel = 0;
+    // param->pikParam.debugLevel = 3;
     if(!cwcp::solveCWCP(param, cwcpMovePath)) std::cerr << "solveCWCP failed" << std::endl;
     if (cwcpMovePath.size() > 0) {
     if(!cwcp::generateKeyPose(param, cwcpMovePath, keyPoseMovePath)) std::cerr << "generateKeyPose failed" << std::endl;
@@ -303,7 +305,9 @@ namespace graph_search_wholebody_contact_planner_sample{
     }
 
     viewer->drawObjects();
-
+    locoPlanner.debugLevel() = 3;
+    locoPlanner.threads() = 1;
+    locoPlanner.addNearGuideCandidateDistance = 0.5;
     locoPlanner.solve();
     gsMoveVariables = locoPlanner.variables;
 

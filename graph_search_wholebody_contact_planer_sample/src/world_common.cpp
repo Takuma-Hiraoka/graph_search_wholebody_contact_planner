@@ -362,7 +362,8 @@ namespace graph_search_wholebody_contact_planner_sample{
           material->setDiffuseColor(cnoid::Vector3f(0.6, 0.3, 0.2));
           shape->setMaterial(material);
           cnoid::SgPosTransformPtr posTransform = new cnoid::SgPosTransform();
-          posTransform->translation() = cnoid::Vector3(-0.7,0,1.0-0.05);
+          posTransform->translation() = cnoid::Vector3(0,0.7,1.0-0.05);
+          // posTransform->translation() = cnoid::Vector3(-0.7,0,1.0-0.05);
           posTransform->rotation() = cnoid::rotFromRpy(M_PI /2, 0, 0);
           posTransform->addChild(shape);
           table1->addShapeNode(posTransform);
