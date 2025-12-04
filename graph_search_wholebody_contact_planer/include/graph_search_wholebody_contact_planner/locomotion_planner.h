@@ -8,6 +8,8 @@ namespace graph_search_wholebody_contact_planner{
   public:
     double addNearGuideCandidateDistance = 0.2;
     std::vector<std::pair<std::vector<double>, std::vector<Contact> > > guidePath; // ガイドパスのframeはリンクとvariableは順番・個数が同じ前提
+    cnoid::Isometry3 goal = cnoid::Isometry3::Identity();
+    double goalPrecision = 1e-3;
     std::string targetBodyName;
 
   public:
@@ -15,6 +17,8 @@ namespace graph_search_wholebody_contact_planner{
     public:
       double addNearGuideCandidateDistance = 0.2;
       std::vector<std::pair<std::vector<double>, std::vector<Contact> > > guidePath;
+      cnoid::Isometry3 goal = cnoid::Isometry3::Identity();
+      double goalPrecision = 1e-3;
       std::string targetBodyName;
     };
     std::shared_ptr<graph_search::Planner::TransitionCheckParam> generateCheckParam() override;

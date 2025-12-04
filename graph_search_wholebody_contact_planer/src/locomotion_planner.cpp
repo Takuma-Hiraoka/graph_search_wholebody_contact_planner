@@ -16,6 +16,8 @@ namespace graph_search_wholebody_contact_planner{
     contactCheckParam->guidePath = this->guidePath;
     contactCheckParam->addNearGuideCandidateDistance = this->addNearGuideCandidateDistance;
     contactCheckParam->targetBodyName = this->targetBodyName;
+    contactCheckParam->goal = this->goal;
+    contactCheckParam->goalPrecision = this->goalPrecision;
   }
 
   inline std::pair<double, int> calcContactDiff(const std::vector<cnoid::BodyPtr>& bodies, const Contact& contact, const std::vector<std::pair<std::vector<double>, std::vector<Contact> > >& guidePath) {
@@ -58,21 +60,20 @@ namespace graph_search_wholebody_contact_planner{
     std::shared_ptr<LocomotionContactTransitionCheckParam> contactCheckParam = std::static_pointer_cast<WholeBodyLocomotionContactPlanner::LocomotionContactTransitionCheckParam>(checkParam);
 
     double diff = 0.0;
-    double rootWeight = 1e2;
     unsigned int idx=0;
     for (int l=0; l<contactCheckParam->variables.size(); l++) {
       if (variables[l]->isRevoluteJoint() || variables[l]->isPrismaticJoint()) {
         //diff += std::abs(state.frame[idx] - guidePath[i].first[idx]);
         idx+=1;
       } else if (contactCheckParam->variables[l]->isFreeJoint()) {
-        if (variables[l]->body()->name() == contactCheckParam->targetBodyName) diff += (cnoid::Vector3(state.frame[idx+0], state.frame[idx+1], state.frame[idx+2]) - cnoid::Vector3(contactCheckParam->guidePath.back().first[idx+0], contactCheckParam->guidePath.back().first[idx+1], contactCheckParam->guidePath.back().first[idx+2])).norm() * rootWeight;
-        // diff += std::abs(cnoid::AngleAxis(cnoid::Quaternion(state.frame[idx+6],state.frame[idx+3],state.frame[idx+4],state.frame[idx+5]).toRotationMatrix().transpose() * cnoid::Quaternion(contactCheckParam->guidePath.back().first[idx+6],contactCheckParam->guidePath.back().first[idx+3],contactCheckParam->guidePath.back().first[idx+4],contactCheckParam->guidePath.back().first[idx+5]).toRotationMatrix()).angle()) * 1e1;
+        if (variables[l]->body()->name() == contactCheckParam->targetBodyName) diff += (cnoid::Vector3(state.frame[idx+0], state.frame[idx+1], state.frame[idx+2]) - contactCheckParam->goal.translation()).norm();
+        // diff += std::abs(cnoid::AngleAxis(cnoid::Quaternion(state.frame[idx+6],state.frame[idx+3],state.frame[idx+4],state.frame[idx+5]).toRotationMatrix().transpose() * cnoid::Quaternion(contactCheckParam->guidePath.back().first[idx+6],contactCheckParam->guidePath.back().first[idx+3],contactCheckParam->guidePath.back().first[idx+4],contactCheckParam->guidePath.back().first[idx+5]).toRotationMatrix()).angle());
         idx+=7;
       }
     }
 
     // std::cerr << "diff " << diff << std::endl;
-    return diff < 1e1;
+    return diff < contactCheckParam->goalPrecision;
   }
 
   void WholeBodyLocomotionContactPlanner::calcHeuristic(std::shared_ptr<graph_search::Planner::TransitionCheckParam> checkParam, std::shared_ptr<graph_search::Node> node) {

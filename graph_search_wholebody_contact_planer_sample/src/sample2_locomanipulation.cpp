@@ -37,12 +37,13 @@ namespace graph_search_wholebody_contact_planner_sample{
     std::vector<graph_search_wholebody_contact_planner::ContactState> gsMovePath;
     std::vector<graph_search_wholebody_contact_planner::ContactState> gsAttachPath;
     // goal
+    double goalPrecision = 0.4;
     {
       std::shared_ptr<ik_constraint2::PositionConstraint> constraint = std::make_shared<ik_constraint2::PositionConstraint>();
       constraint->A_link() = robot->rootLink();
       constraint->B_link() = cube->rootLink();
       constraint->weight() << 1.0, 1.0, 1.0, 0.0, 0.0, 0.0;
-      constraint->precision() = 0.4;
+      constraint->precision() = goalPrecision;
       param->goals.push_back(constraint);
     }
 
@@ -119,6 +120,8 @@ namespace graph_search_wholebody_contact_planner_sample{
     // locoPlanner.pikParam.viewMilliseconds = -1;
     // locoPlanner.pikParam.viewer = viewer;
 
+    locoPlanner.goal = cube->rootLink()->T();
+    locoPlanner.goalPrecision = goalPrecision * 1.1;
     locoPlanner.addCandidateDistance = 1.5;
     locoPlanner.threads() = 10;
     locoPlanner.debugLevel() = 0;
@@ -255,7 +258,7 @@ namespace graph_search_wholebody_contact_planner_sample{
       // constraint->B_localpos().translation() = cnoid::Vector3(-0.7,0,1.0-0.05);
       constraint->B_localpos().translation() = cnoid::Vector3(0,0.7,1.0-0.05);
       constraint->weight() << 1.0, 1.0, 1.0, 0.0, 0.0, 0.0;
-      constraint->precision() = 0.4;
+      constraint->precision() = goalPrecision;
       param->goals.push_back(constraint);
     }
     param->projectLink = cube->rootLink();
@@ -305,7 +308,8 @@ namespace graph_search_wholebody_contact_planner_sample{
     }
 
     viewer->drawObjects();
-    locoPlanner.debugLevel() = 3;
+    locoPlanner.goal.translation() = cnoid::Vector3(0,0.7,1.0-0.05);
+    locoPlanner.debugLevel() = 0;
     locoPlanner.threads() = 10;
     locoPlanner.solve();
     gsMoveVariables = locoPlanner.variables;

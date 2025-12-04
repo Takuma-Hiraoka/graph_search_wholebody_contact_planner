@@ -16,6 +16,7 @@ namespace graph_search_wholebody_contact_planner_sample{
 
     std::vector<double> initialPose;
     global_inverse_kinematics_solver::link2Frame(param->variables, initialPose);
+    double goalPrecision = 1e-3;
     // goal
     {
       std::shared_ptr<ik_constraint2::PositionConstraint> constraint = std::make_shared<ik_constraint2::PositionConstraint>();
@@ -23,7 +24,7 @@ namespace graph_search_wholebody_contact_planner_sample{
       constraint->B_localpos() = robot->rootLink()->T();
       constraint->B_localpos().translation() += cnoid::Vector3(0.5,0,0.5);
       constraint->weight() << 1.0, 1.0, 1.0, 1.0, 1.0, 1.0;
-      constraint->precision() = 1e-3;
+      constraint->precision() = goalPrecision;
       param->goals.push_back(constraint);
     }
 
@@ -77,7 +78,9 @@ namespace graph_search_wholebody_contact_planner_sample{
     viewer->drawOn(drawOnObjects);
     viewer->drawObjects();
 
-
+    planner.goal = robot->rootLink()->T();
+    planner.goal.translation() += cnoid::Vector3(0.5,0,0.5);
+    planner.goalPrecision = goalPrecision * 1e2;
     planner.pikParam.debugLevel = 0;
     planner.pikParam.viewMilliseconds = -1;
     // planner.pikParam.viewer = viewer;
