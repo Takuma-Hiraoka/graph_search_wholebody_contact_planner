@@ -98,7 +98,7 @@ namespace graph_search_wholebody_contact_planner{
 
       std::cerr << "path size " << contactCheckParam->guidePath.size() << " nearestIdx : " << nearestIdx << std::endl;
       std::static_pointer_cast<ContactNode>(node)->level() = (unsigned int)nearestIdx;
-      node->heuristic() = (contactCheckParam->guidePath.size() - 1 - nearestIdx) * 1e3 + diffSum;
+      node->heuristic() = (contactCheckParam->guidePath.size() - 1 - nearestIdx) * 1e1 + diffSum;
     }
   }
 
@@ -146,7 +146,7 @@ namespace graph_search_wholebody_contact_planner{
         contactStaticCandidatesLimited.push_back(contactCheckParam->contactStaticCandidates[j]);
       }
       std::vector<std::shared_ptr<ContactCandidate> > contactStaticCandidatesNear;
-      candidatesFromGuide(contactCheckParam->bodies, contactStaticCandidatesLimited, contactCheckParam->guidePath, contactCheckParam->contactDynamicCandidates[i]->bodyName, contactCheckParam->contactDynamicCandidates[i]->linkName, contactStaticCandidatesNear, contactCheckParam->level);
+      candidatesFromGuide(contactCheckParam->bodies, contactStaticCandidatesLimited, contactCheckParam->guidePath, contactCheckParam->contactDynamicCandidates[i]->bodyName, contactCheckParam->contactDynamicCandidates[i]->linkName, contactStaticCandidatesNear, contactCheckParam->addNearGuideCandidateDistance, contactCheckParam->level);
 
       for (int j=0; j<contactStaticCandidatesNear.size(); j++) {
         std::shared_ptr<ContactNode> newNode = std::make_shared<ContactNode>();
@@ -167,7 +167,7 @@ namespace graph_search_wholebody_contact_planner{
 
   }
 
-  void WholeBodyLocomotionContactPlanner::candidatesFromGuide(const std::vector<cnoid::BodyPtr> bodies, const std::vector<std::shared_ptr<ContactCandidate> >& contactCandidatesRaw, const std::vector<std::pair<std::vector<double>, std::vector<Contact> > >& guidePath, const std::string& bodyName, const std::string& linkName, std::vector<std::shared_ptr<ContactCandidate> >& candidates, const int& level) {
+  void WholeBodyLocomotionContactPlanner::candidatesFromGuide(const std::vector<cnoid::BodyPtr> bodies, const std::vector<std::shared_ptr<ContactCandidate> >& contactCandidatesRaw, const std::vector<std::pair<std::vector<double>, std::vector<Contact> > >& guidePath, const std::string& bodyName, const std::string& linkName, std::vector<std::shared_ptr<ContactCandidate> >& candidates, double distance, const int& level) {
     // guidePathに従って探索する範囲を制限する
     // guidePathの全ノードについて、contactableになっているリンクのcontactDynamicCandidatesと、最近接している環境点からaddNearGuideCandidateDistance以内の距離のstaticCandidateを接触させる
     for (int j=0; j<contactCandidatesRaw.size(); j++) {
@@ -185,7 +185,7 @@ namespace graph_search_wholebody_contact_planner{
                   candidatePose = bodies[b]->link(contactCandidatesRaw[j]->linkName)->T() * contactCandidatesRaw[j]->localPose;
                 }
               }
-              if (((guidePose.translation() - candidatePose.translation()).norm() <= this->addNearGuideCandidateDistance) && // 最近接している環境点からaddNearGuideCandidateDistance以内
+              if (((guidePose.translation() - candidatePose.translation()).norm() <= distance) && // 最近接している環境点からaddNearGuideCandidateDistance以内
                   (cnoid::AngleAxisd(guidePose.linear().transpose() * candidatePose.linear()).angle() >= M_PI / 2)) // 姿勢. もともと反転していることに注意
               {
                 candidates.push_back(contactCandidatesRaw[j]);

@@ -90,14 +90,25 @@ namespace graph_search_wholebody_contact_planner_sample{
 
     addLimbInfo(locoPlanner, robot);
 
+    // locoPlanner.pikParam.debugLevel = 3;
+    // locoPlanner.pikParam.viewMilliseconds = -1;
+    // locoPlanner.pikParam.viewer = viewer;
+
+    locoPlanner.goal = cube->rootLink()->T();
+    locoPlanner.goalPrecision = goalPrecision * 1.1;
+    locoPlanner.addCandidateDistance = 1.5;
+    locoPlanner.threads() = 10;
+    locoPlanner.debugLevel() = 0;
+    // locoPlanner.maxExtendNum() = 1000;
+
     std::vector<std::shared_ptr<graph_search_wholebody_contact_planner::ContactCandidate> > larmGuidedCandidates;
-    locoPlanner.candidatesFromGuide(locoPlanner.bodies, locoPlanner.contactStaticCandidates, locoPlanner.guidePath, "JAXON", "LARM_JOINT7", larmGuidedCandidates);
+    locoPlanner.candidatesFromGuide(locoPlanner.bodies, locoPlanner.contactStaticCandidates, locoPlanner.guidePath, "JAXON", "LARM_JOINT7", larmGuidedCandidates, locoPlanner.addCandidateDistance);
     std::vector<std::shared_ptr<graph_search_wholebody_contact_planner::ContactCandidate> > rarmGuidedCandidates;
-    locoPlanner.candidatesFromGuide(locoPlanner.bodies, locoPlanner.contactStaticCandidates, locoPlanner.guidePath, "JAXON", "RARM_JOINT7", rarmGuidedCandidates);
+    locoPlanner.candidatesFromGuide(locoPlanner.bodies, locoPlanner.contactStaticCandidates, locoPlanner.guidePath, "JAXON", "RARM_JOINT7", rarmGuidedCandidates, locoPlanner.addCandidateDistance);
     std::vector<std::shared_ptr<graph_search_wholebody_contact_planner::ContactCandidate> > llegGuidedCandidates;
-    locoPlanner.candidatesFromGuide(locoPlanner.bodies, locoPlanner.contactStaticCandidates, locoPlanner.guidePath, "JAXON", "LLEG_JOINT5", llegGuidedCandidates);
+    locoPlanner.candidatesFromGuide(locoPlanner.bodies, locoPlanner.contactStaticCandidates, locoPlanner.guidePath, "JAXON", "LLEG_JOINT5", llegGuidedCandidates, locoPlanner.addCandidateDistance);
     std::vector<std::shared_ptr<graph_search_wholebody_contact_planner::ContactCandidate> > rlegGuidedCandidates;
-    locoPlanner.candidatesFromGuide(locoPlanner.bodies, locoPlanner.contactStaticCandidates, locoPlanner.guidePath, "JAXON", "RLEG_JOINT5", rlegGuidedCandidates);
+    locoPlanner.candidatesFromGuide(locoPlanner.bodies, locoPlanner.contactStaticCandidates, locoPlanner.guidePath, "JAXON", "RLEG_JOINT5", rlegGuidedCandidates, locoPlanner.addCandidateDistance);
 
     {
       std::vector<cnoid::SgNodePtr> drawOnObjects;
@@ -115,17 +126,6 @@ namespace graph_search_wholebody_contact_planner_sample{
     }
 
     viewer->drawObjects();
-
-    // locoPlanner.pikParam.debugLevel = 3;
-    // locoPlanner.pikParam.viewMilliseconds = -1;
-    // locoPlanner.pikParam.viewer = viewer;
-
-    locoPlanner.goal = cube->rootLink()->T();
-    locoPlanner.goalPrecision = goalPrecision * 1.1;
-    locoPlanner.addCandidateDistance = 1.5;
-    locoPlanner.threads() = 10;
-    locoPlanner.debugLevel() = 0;
-    // locoPlanner.maxExtendNum() = 1000;
 
     locoPlanner.solve();
     gsGoVariables = locoPlanner.variables;
@@ -280,13 +280,13 @@ namespace graph_search_wholebody_contact_planner_sample{
     locoPlanner.addNearGuideCandidateDistance = 0.5; // 接触するdynamic contactの個数に応じて距離を変える。リンク数が減るなら多くしても良い
 
     larmGuidedCandidates.clear();
-    locoPlanner.candidatesFromGuide(locoPlanner.bodies, locoPlanner.contactStaticCandidates, locoPlanner.guidePath, "JAXON", "LARM_JOINT7", larmGuidedCandidates);
+    locoPlanner.candidatesFromGuide(locoPlanner.bodies, locoPlanner.contactStaticCandidates, locoPlanner.guidePath, "JAXON", "LARM_JOINT7", larmGuidedCandidates, locoPlanner.addCandidateDistance);
     rarmGuidedCandidates.clear();
-    locoPlanner.candidatesFromGuide(locoPlanner.bodies, locoPlanner.contactStaticCandidates, locoPlanner.guidePath, "JAXON", "RARM_JOINT7", rarmGuidedCandidates);
+    locoPlanner.candidatesFromGuide(locoPlanner.bodies, locoPlanner.contactStaticCandidates, locoPlanner.guidePath, "JAXON", "RARM_JOINT7", rarmGuidedCandidates, locoPlanner.addCandidateDistance);
     llegGuidedCandidates.clear();
-    locoPlanner.candidatesFromGuide(locoPlanner.bodies, locoPlanner.contactStaticCandidates, locoPlanner.guidePath, "JAXON", "LLEG_JOINT5", llegGuidedCandidates);
+    locoPlanner.candidatesFromGuide(locoPlanner.bodies, locoPlanner.contactStaticCandidates, locoPlanner.guidePath, "JAXON", "LLEG_JOINT5", llegGuidedCandidates, locoPlanner.addCandidateDistance);
     rlegGuidedCandidates.clear();
-    locoPlanner.candidatesFromGuide(locoPlanner.bodies, locoPlanner.contactStaticCandidates, locoPlanner.guidePath, "JAXON", "RLEG_JOINT5", rlegGuidedCandidates);
+    locoPlanner.candidatesFromGuide(locoPlanner.bodies, locoPlanner.contactStaticCandidates, locoPlanner.guidePath, "JAXON", "RLEG_JOINT5", rlegGuidedCandidates, locoPlanner.addCandidateDistance);
 
     {
       std::vector<cnoid::SgNodePtr> drawOnObjects;

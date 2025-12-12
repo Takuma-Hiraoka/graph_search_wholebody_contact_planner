@@ -104,6 +104,7 @@ namespace graph_search_wholebody_contact_planner{
       std::cerr << checkParam->preState << std::endl;
       std::cerr << "postState" << std::endl;
       std::cerr << postState << std::endl;
+      getchar();
     }
 
     global_inverse_kinematics_solver::frame2Link(checkParam->preState.frame, checkParam->variables);

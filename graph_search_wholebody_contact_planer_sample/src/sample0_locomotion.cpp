@@ -62,22 +62,6 @@ namespace graph_search_wholebody_contact_planner_sample{
     // drawOnObjects.insert(drawOnObjects.end(), csc.begin(), csc.end());
     // drawOnObjects.insert(drawOnObjects.end(), cdc.begin(), cdc.end());
 
-    std::vector<std::shared_ptr<graph_search_wholebody_contact_planner::ContactCandidate> > guidedCandidates;
-    planner.candidatesFromGuide(planner.bodies, planner.contactStaticCandidates, planner.guidePath, "JAXON", "LARM_JOINT7", guidedCandidates);
-    planner.candidatesFromGuide(planner.bodies, planner.contactStaticCandidates, planner.guidePath, "JAXON", "RARM_JOINT7", guidedCandidates);
-    planner.candidatesFromGuide(planner.bodies, planner.contactStaticCandidates, planner.guidePath, "JAXON", "LLEG_JOINT5", guidedCandidates);
-    planner.candidatesFromGuide(planner.bodies, planner.contactStaticCandidates, planner.guidePath, "JAXON", "RLEG_JOINT5", guidedCandidates);
-
-    cnoid::BodyPtr ccMarkers = new cnoid::Body();
-    {
-      cnoid::LinkPtr rootLink = new cnoid::Link();
-      ccMarkers->setRootLink(rootLink);
-      graph_search_wholebody_contact_planner::generateCandidateVisualLink(planner.bodies, rootLink, guidedCandidates, cnoid::Vector3f(1.0, 0.0, 0.0));
-    }
-    drawOnObjects.push_back(ccMarkers->rootLink()->visualShape());
-    viewer->drawOn(drawOnObjects);
-    viewer->drawObjects();
-
     planner.goal = robot->rootLink()->T();
     planner.goal.translation() += cnoid::Vector3(0.5,0,0.5);
     planner.goalPrecision = goalPrecision * 1e2;
@@ -90,6 +74,23 @@ namespace graph_search_wholebody_contact_planner_sample{
     planner.threads() = 10;
     planner.debugLevel() = 0;
     // planner.maxExtendNum() = 10;
+
+    std::vector<std::shared_ptr<graph_search_wholebody_contact_planner::ContactCandidate> > guidedCandidates;
+    planner.candidatesFromGuide(planner.bodies, planner.contactStaticCandidates, planner.guidePath, "JAXON", "LARM_JOINT7", guidedCandidates, planner.addNearGuideCandidateDistance);
+    planner.candidatesFromGuide(planner.bodies, planner.contactStaticCandidates, planner.guidePath, "JAXON", "RARM_JOINT7", guidedCandidates, planner.addNearGuideCandidateDistance);
+    planner.candidatesFromGuide(planner.bodies, planner.contactStaticCandidates, planner.guidePath, "JAXON", "LLEG_JOINT5", guidedCandidates, planner.addNearGuideCandidateDistance);
+    planner.candidatesFromGuide(planner.bodies, planner.contactStaticCandidates, planner.guidePath, "JAXON", "RLEG_JOINT5", guidedCandidates, planner.addNearGuideCandidateDistance);
+
+    cnoid::BodyPtr ccMarkers = new cnoid::Body();
+    {
+      cnoid::LinkPtr rootLink = new cnoid::Link();
+      ccMarkers->setRootLink(rootLink);
+      graph_search_wholebody_contact_planner::generateCandidateVisualLink(planner.bodies, rootLink, guidedCandidates, cnoid::Vector3f(1.0, 0.0, 0.0));
+    }
+    drawOnObjects.push_back(ccMarkers->rootLink()->visualShape());
+    viewer->drawOn(drawOnObjects);
+    viewer->drawObjects();
+
     planner.solve();
 
     std::vector<graph_search_wholebody_contact_planner::ContactState> gsPath;
