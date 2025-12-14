@@ -126,7 +126,7 @@ namespace graph_search_wholebody_contact_planner{
                 }
               }
               scfr_solver::SCFRParam scfrParam;
-              if (poses.size() == 0) continue;
+              if (poses.size() <= 1) continue; // エッジに触れるだけでscfrができることがあるが、その後の持ち上げができないことが多いため、1点のみの接触は不可
               solved = ik_constraint2_keep_collision_scfr::checkSCFRExistance(poses,
                                                                               As,
                                                                               bs,
@@ -177,7 +177,7 @@ namespace graph_search_wholebody_contact_planner{
                 }
               }
               scfr_solver::SCFRParam scfrParam;
-              if (poses.size() == 0) continue;
+              if (poses.size() <= 1) continue; // エッジに触れるだけでscfrができることがあるが、その後の持ち上げができないことが多いため、1点のみの接触は不可
               solved = ik_constraint2_keep_collision_scfr::checkSCFRExistance(poses,
                                                                               As,
                                                                               bs,
@@ -473,15 +473,33 @@ namespace graph_search_wholebody_contact_planner{
       }
     }
     moveContactConstraint->B_localpos() = moveContact.c2.localPose;
-    moveContactConstraint->B_localpos().linear() = moveContactConstraint->B_localpos().linear() * cnoid::rotFromRpy(0.0, M_PI, M_PI/2).transpose(); // scfrを作る関係上localposのZはrobotの内側を向いている. PositionConstraintで一致させるために回転だけ逆にする.
-
-    if ((ikState==IKState::DETACH_FIXED) ||
-        (ikState==IKState::ATTACH_PRE)) {
-      if (moveContactConstraint->B_link()) moveContactConstraint->B_localpos().translation() += moveContactConstraint->B_link()->R() * moveContactConstraint->B_localpos().linear() * cnoid::Vector3(0,0,0.1);
-      else moveContactConstraint->B_localpos().translation() += moveContactConstraint->B_localpos().linear() * cnoid::Vector3(0,0,0.1);
+    bool use_A_robot = false;
+    bool use_B_robot = false;
+    for (int i=0; i<contactCheckParam->bodyContactConstraints.size() && !use_A_robot && !use_B_robot; i++) {
+      std::shared_ptr<ik_constraint2_body_contact::BodyContactConstraint> bodyConstraint = std::static_pointer_cast<ik_constraint2_body_contact::BodyContactConstraint>(contactCheckParam->bodyContactConstraints[i]);
+      if (bodyConstraint->A_link() == moveContactConstraint->A_link()) use_A_robot = true;
+      if (bodyConstraint->A_link() == moveContactConstraint->B_link()) use_B_robot = true;
     }
-    moveContactConstraint->eval_link() = moveContactConstraint->B_link();
-    moveContactConstraint->eval_localR() = moveContactConstraint->B_localpos().linear();
+    if (use_A_robot || !use_B_robot) {
+      moveContactConstraint->B_localpos().linear() = moveContactConstraint->B_localpos().linear() * cnoid::rotFromRpy(0.0, M_PI, M_PI/2).transpose(); // scfrを作る関係上localposのZはrobotの内側を向いている. PositionConstraintで一致させるために回転だけ逆にする.
+      if ((ikState==IKState::DETACH_FIXED) ||
+          (ikState==IKState::ATTACH_PRE)) {
+        if (moveContactConstraint->B_link()) moveContactConstraint->B_localpos().translation() += moveContactConstraint->B_link()->R() * moveContactConstraint->B_localpos().linear() * cnoid::Vector3(0,0,0.1);
+        else moveContactConstraint->B_localpos().translation() += moveContactConstraint->B_localpos().linear() * cnoid::Vector3(0,0,0.1);
+      }
+      moveContactConstraint->eval_link() = moveContactConstraint->B_link();
+      moveContactConstraint->eval_localR() = moveContactConstraint->B_localpos().linear();
+    }else if (use_B_robot) {
+      moveContactConstraint->A_localpos().linear() = moveContactConstraint->A_localpos().linear() * cnoid::rotFromRpy(0.0, M_PI, M_PI/2).transpose(); // scfrを作る関係上localposのZはrobotの内側を向いている. PositionConstraintで一致させるために回転だけ逆にする.
+      if ((ikState==IKState::DETACH_FIXED) ||
+          (ikState==IKState::ATTACH_PRE)) {
+        if (moveContactConstraint->A_link()) moveContactConstraint->A_localpos().translation() += moveContactConstraint->A_link()->R() * moveContactConstraint->A_localpos().linear() * cnoid::Vector3(0,0,0.1);
+        else moveContactConstraint->A_localpos().translation() += moveContactConstraint->A_localpos().linear() * cnoid::Vector3(0,0,0.1);
+      }
+      moveContactConstraint->eval_link() = moveContactConstraint->A_link();
+      moveContactConstraint->eval_localR() = moveContactConstraint->A_localpos().linear();
+    }
+
     moveContactConstraint->weight() << 1.0, 1.0, 1.0, 1.0, 1.0, 0.0;
     constraints2.push_back(moveContactConstraint);
 
@@ -521,17 +539,13 @@ namespace graph_search_wholebody_contact_planner{
                                                           tmpPath);
     }
 
-    bool use_A_bodyContact = false;
-    bool use_B_bodyContact = false;
     if ((ikState==IKState::ATTACH_PRE) && !solved) {
+      bool use_A_bodyContact = false;
+      bool use_B_bodyContact = false;
       for (int i=0; i<contactCheckParam->bodyContactConstraints.size() && !use_A_bodyContact && !use_B_bodyContact; i++) { // 現状は一方のみがbody contactを探索することが前提
         std::shared_ptr<ik_constraint2_body_contact::BodyContactConstraint> bodyConstraint = std::static_pointer_cast<ik_constraint2_body_contact::BodyContactConstraint>(contactCheckParam->bodyContactConstraints[i]);
         if (bodyConstraint->A_link() == moveContactConstraint->A_link()) {
           use_A_bodyContact = true;
-          // moveContactConstraint->A_localPos()
-          // moveContactConstraint->B_localPos()
-          moveContactConstraint->eval_link() = moveContactConstraint->B_link();
-          moveContactConstraint->eval_localR() = moveContactConstraint->B_localpos().linear();
           moveContactConstraint->A_contact_pos_link() = bodyConstraint->A_contact_pos_link();
           moveContactConstraint->A_contact_pos_link()->T() = moveContactConstraint->A_localpos();
           moveContactConstraint->A_contactPoints() = bodyConstraint->A_contactPoints();
@@ -544,18 +558,6 @@ namespace graph_search_wholebody_contact_planner{
         }
         if (bodyConstraint->A_link() == moveContactConstraint->B_link()) {
           use_B_bodyContact = true;
-          moveContactConstraint->A_localpos().linear() = moveContactConstraint->A_localpos().linear() * cnoid::rotFromRpy(0.0, M_PI, M_PI/2).transpose(); // scfrを作る関係上localposのZはrobotの内側を向いている. PositionConstraintで一致させるために回転だけ逆にする.
-          moveContactConstraint->B_localpos().linear() = moveContactConstraint->B_localpos().linear() * cnoid::rotFromRpy(0.0, M_PI, M_PI/2); // 戻す
-          if ((ikState==IKState::DETACH_FIXED) ||
-              (ikState==IKState::ATTACH_PRE)) {
-            if (moveContactConstraint->A_link()) moveContactConstraint->A_localpos().translation() += moveContactConstraint->A_link()->R() * moveContactConstraint->A_localpos().linear() * cnoid::Vector3(0,0,0.1);
-            else moveContactConstraint->A_localpos().translation() += moveContactConstraint->A_localpos().linear() * cnoid::Vector3(0,0,0.1);
-            // 変えた分を戻す
-            if (moveContactConstraint->B_link()) moveContactConstraint->B_localpos().translation() -= moveContactConstraint->B_link()->R() * moveContactConstraint->B_localpos().linear() * cnoid::Vector3(0,0,0.1);
-            else moveContactConstraint->B_localpos().translation() -= moveContactConstraint->B_localpos().linear() * cnoid::Vector3(0,0,0.1);
-          }
-          moveContactConstraint->eval_link() = moveContactConstraint->A_link();
-          moveContactConstraint->eval_localR() = moveContactConstraint->A_localpos().linear();
           moveContactConstraint->B_contact_pos_link() = bodyConstraint->A_contact_pos_link();
           moveContactConstraint->B_contact_pos_link()->T() = moveContactConstraint->B_localpos();
           moveContactConstraint->B_contactPoints() = bodyConstraint->A_contactPoints();
@@ -643,13 +645,13 @@ namespace graph_search_wholebody_contact_planner{
 
     if (solved) {
       postState.transition.insert(postState.transition.end(), (*tmpPath).begin(), (*tmpPath).end());
-      if (use_A_bodyContact) {
+      if (use_A_robot) {
         moveContact.c1.localPose = moveContactConstraint->A_localpos();
         cnoid::Matrix3d B_rot = cnoid::Matrix3d::Identity();
         if (moveContactConstraint->B_link()) B_rot = moveContactConstraint->B_link()->R();
         cnoid::Matrix3d A_rot = moveContactConstraint->A_link()->R() * moveContactConstraint->A_localpos().linear();
         moveContact.c2.localPose.linear() = (B_rot.transpose() * A_rot) * cnoid::rotFromRpy(0.0, M_PI, M_PI/2);
-      } else if (use_B_bodyContact) {
+      } else if (use_B_robot) {
         moveContact.c2.localPose = moveContactConstraint->B_localpos();
         cnoid::Matrix3d A_rot = cnoid::Matrix3d::Identity();
         if (moveContactConstraint->A_link()) A_rot = moveContactConstraint->A_link()->R();

@@ -369,11 +369,12 @@ namespace graph_search_wholebody_contact_planner{
     if ((ikState == IKState::ATTACH_PRE) || (ikState == IKState::ATTACH_FIXED)) targetLevel = std::min(contactCheckParam->level+1, (unsigned int)contactCheckParam->guidePath.size()-1);
     for (int i=0; i<contactCheckParam->variables.size(); i++) {
       if (contactCheckParam->variables[i]->isRevoluteJoint() || contactCheckParam->variables[i]->isPrismaticJoint()) {
-        std::shared_ptr<ik_constraint2::JointAngleConstraint> constraint = std::make_shared<ik_constraint2::JointAngleConstraint>();
-        constraint->joint() = contactCheckParam->variables[i];
-        constraint->targetq() = contactCheckParam->guidePath[targetLevel].first[nominalIdx];
-        constraint->precision() = 1e10; // always satisfied
-        nominals.push_back(constraint);
+        // std::shared_ptr<ik_constraint2::JointAngleConstraint> constraint = std::make_shared<ik_constraint2::JointAngleConstraint>();
+        // constraint->joint() = contactCheckParam->variables[i];
+        // constraint->targetq() = contactCheckParam->guidePath[targetLevel].first[nominalIdx];
+        // constraint->precision() = 1e10; // always satisfied
+        // nominals.push_back(constraint);
+        // 関節角度はnominal姿勢を優先. その後のIKを解きやすくする
         nominalIdx += 1;
       } else if (contactCheckParam->variables[i]->isFreeJoint()) {
         std::shared_ptr<ik_constraint2::PositionConstraint> constraint = std::make_shared<ik_constraint2::PositionConstraint>();
@@ -389,6 +390,7 @@ namespace graph_search_wholebody_contact_planner{
         nominalIdx += 7;
       }
     }
+    nominals.insert(nominals.end(), contactCheckParam->nominals.begin(), contactCheckParam->nominals.end());
 
     for (int i=0;i<scfrConstraints.size();i++) {
       if (scfrConstraints[i]->poses().size() == 0) return false; // 接触が存在しない物体がある.
