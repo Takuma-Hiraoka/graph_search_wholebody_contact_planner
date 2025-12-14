@@ -40,13 +40,6 @@ namespace graph_search_wholebody_contact_planner{
     double nSatisfy = 1e3;
     double contactWeight = 1e1;
     double scfrNSatisfy = 1e2;
-    // 対象物体に触れる接触以外は触れないように
-    // for (int i=0; i<state.contacts.size(); i++) {
-    //   if (!((!targetContact.first.c1.isStatic && (((targetContact.first.c1.bodyName == state.contacts[i].c1.bodyName) && (targetContact.first.c1.linkName == state.contacts[i].c1.linkName)) || ((targetContact.first.c1.bodyName == state.contacts[i].c2.bodyName) && (targetContact.first.c1.linkName == state.contacts[i].c2.linkName)))) ||
-    //         (!targetContact.first.c2.isStatic && (((targetContact.first.c2.bodyName == state.contacts[i].c1.bodyName) && (targetContact.first.c2.linkName == state.contacts[i].c1.linkName)) || ((targetContact.first.c2.bodyName == state.contacts[i].c2.bodyName) && (targetContact.first.c2.linkName == state.contacts[i].c2.linkName)))))) {
-    //     heuristic += contactWeight;
-    //   }
-    // }
     if (contactCheckParam->targetContact.second) { // attach
       bool attach = false;
       for (int i=0; i<state.contacts.size(); i++) {
@@ -61,6 +54,20 @@ namespace graph_search_wholebody_contact_planner{
       if (!detach) {
         heuristic += nSatisfy;
         heuristic += state.contacts.size() * contactWeight;
+        // 対象物体にはひとつは触れているように
+        bool in_contact = false;
+        for (int i=0; i<state.contacts.size(); i++) {
+          if (state.contacts[i] == contactCheckParam->targetContact.first) continue;
+          if (!contactCheckParam->targetContact.first.c1.isStatic &&
+              ((state.contacts[i].c1.bodyName == contactCheckParam->targetContact.first.c1.bodyName) ||
+               (state.contacts[i].c2.bodyName == contactCheckParam->targetContact.first.c1.bodyName))
+              ) in_contact = true;
+          else if (!contactCheckParam->targetContact.first.c2.isStatic &&
+              ((state.contacts[i].c1.bodyName == contactCheckParam->targetContact.first.c2.bodyName) ||
+               (state.contacts[i].c2.bodyName == contactCheckParam->targetContact.first.c2.bodyName))
+              ) in_contact = true;
+        }
+        if (in_contact) heuristic -= contactWeight;
         // detachが可能になる（SCFRが存在するようになる）ときに良く
         // targetContactに関係するbodyのみ
         // targetContactに関係するbodyは既にfixed bodyとkinematics tree上で連結しているという仮定
@@ -470,8 +477,8 @@ namespace graph_search_wholebody_contact_planner{
 
     if ((ikState==IKState::DETACH_FIXED) ||
         (ikState==IKState::ATTACH_PRE)) {
-      if (moveContactConstraint->B_link()) moveContactConstraint->B_localpos().translation() += moveContactConstraint->B_link()->R() * moveContactConstraint->B_localpos().linear() * cnoid::Vector3(0,0,0.02);
-      else moveContactConstraint->B_localpos().translation() += moveContactConstraint->B_localpos().linear() * cnoid::Vector3(0,0,0.02);
+      if (moveContactConstraint->B_link()) moveContactConstraint->B_localpos().translation() += moveContactConstraint->B_link()->R() * moveContactConstraint->B_localpos().linear() * cnoid::Vector3(0,0,0.1);
+      else moveContactConstraint->B_localpos().translation() += moveContactConstraint->B_localpos().linear() * cnoid::Vector3(0,0,0.1);
     }
     moveContactConstraint->eval_link() = moveContactConstraint->B_link();
     moveContactConstraint->eval_localR() = moveContactConstraint->B_localpos().linear();
@@ -541,11 +548,11 @@ namespace graph_search_wholebody_contact_planner{
           moveContactConstraint->B_localpos().linear() = moveContactConstraint->B_localpos().linear() * cnoid::rotFromRpy(0.0, M_PI, M_PI/2); // 戻す
           if ((ikState==IKState::DETACH_FIXED) ||
               (ikState==IKState::ATTACH_PRE)) {
-            if (moveContactConstraint->A_link()) moveContactConstraint->A_localpos().translation() += moveContactConstraint->A_link()->R() * moveContactConstraint->A_localpos().linear() * cnoid::Vector3(0,0,0.02);
-            else moveContactConstraint->A_localpos().translation() += moveContactConstraint->A_localpos().linear() * cnoid::Vector3(0,0,0.02);
+            if (moveContactConstraint->A_link()) moveContactConstraint->A_localpos().translation() += moveContactConstraint->A_link()->R() * moveContactConstraint->A_localpos().linear() * cnoid::Vector3(0,0,0.1);
+            else moveContactConstraint->A_localpos().translation() += moveContactConstraint->A_localpos().linear() * cnoid::Vector3(0,0,0.1);
             // 変えた分を戻す
-            if (moveContactConstraint->B_link()) moveContactConstraint->B_localpos().translation() -= moveContactConstraint->B_link()->R() * moveContactConstraint->B_localpos().linear() * cnoid::Vector3(0,0,0.02);
-            else moveContactConstraint->B_localpos().translation() -= moveContactConstraint->B_localpos().linear() * cnoid::Vector3(0,0,0.02);
+            if (moveContactConstraint->B_link()) moveContactConstraint->B_localpos().translation() -= moveContactConstraint->B_link()->R() * moveContactConstraint->B_localpos().linear() * cnoid::Vector3(0,0,0.1);
+            else moveContactConstraint->B_localpos().translation() -= moveContactConstraint->B_localpos().linear() * cnoid::Vector3(0,0,0.1);
           }
           moveContactConstraint->eval_link() = moveContactConstraint->A_link();
           moveContactConstraint->eval_localR() = moveContactConstraint->A_localpos().linear();

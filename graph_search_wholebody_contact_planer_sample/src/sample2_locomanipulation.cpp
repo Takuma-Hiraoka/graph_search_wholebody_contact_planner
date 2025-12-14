@@ -98,6 +98,7 @@ namespace graph_search_wholebody_contact_planner_sample{
     locoPlanner.goalPrecision = goalPrecision * 1.1;
     locoPlanner.addCandidateDistance = 1.5;
     locoPlanner.threads() = 10;
+    // locoPlanner.gikParam.threads = 3;
     locoPlanner.debugLevel() = 0;
     // locoPlanner.maxExtendNum() = 1000;
 
@@ -150,6 +151,7 @@ namespace graph_search_wholebody_contact_planner_sample{
     manipPlanner.variables.push_back(cube->rootLink());
     manipPlanner.threads() = locoPlanner.threads();
     manipPlanner.addCandidateDistance = 1.2;
+    manipPlanner.gikParam.threads = locoPlanner.gikParam.threads;
     manipPlanner.debugLevel() = 0;
     manipPlanner.currentContactState = std::make_shared<graph_search_wholebody_contact_planner::ContactState>(gsGoPath.back());
     for (int i=0; i<manipPlanner.currentContactState->contacts.size(); i++) {
