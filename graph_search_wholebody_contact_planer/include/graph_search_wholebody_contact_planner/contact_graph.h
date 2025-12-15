@@ -25,6 +25,7 @@ namespace graph_search_wholebody_contact_planner{
     prioritized_inverse_kinematics_solver2::IKParam pikParam;
     global_inverse_kinematics_solver::GIKParam gikParam;
     std::shared_ptr<moveit_extensions::InterpolatedPropagationDistanceField> field;
+    std::vector<std::vector<std::string> > robotLinkPriority;
     double addCandidateDistance = 2.0; // contactDynamicCandidateのルートリンクからこの距離を超えるものはgikを使うまでもなく解けないものとする
 
     WholeBodyContactPlanner() {
@@ -67,6 +68,7 @@ namespace graph_search_wholebody_contact_planner{
       std::vector<std::shared_ptr<ContactCandidate> > contactStaticCandidates;
       prioritized_inverse_kinematics_solver2::IKParam pikParam;
       global_inverse_kinematics_solver::GIKParam gikParam;
+      std::vector<std::vector<std::string> > robotLinkPriority; // 0. priority 1. robot link name. locomotion <---> manipulation. robotのcontactDynamicCandidatesの接触点のlinkNameはすべてrobotLinkPriorityに含まれる単語を含むこと
       int debugLevel = 0;
       double addCandidateDistance = 2.0;
       unsigned int level=0;

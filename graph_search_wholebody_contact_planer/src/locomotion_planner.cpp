@@ -83,6 +83,8 @@ namespace graph_search_wholebody_contact_planner{
     if (state.transition[0].size() != state.frame.size()) std::cerr << "[WholeBodyLocomotionContactPlanner] error! state.transition[0].size() and state.frame.size() are mismatched!" << std::endl;
     if (state.frame.size() != contactCheckParam->guidePath[0].first.size()) std::cerr << "[WholeBodyLocomotionContactPlanner] error! state.frame.size() and contactCheckParam.guidePath[0].size() are mismatched!" << std::endl;
     double diffSum = 0;
+    double prioritizedContactHeuristic = 0;
+    double prioritizedWeight = 1e1;
     double nearestIdxSum = 0;
     int count = 0;
     for (int i=0; i<state.contacts.size(); i++) {
@@ -91,6 +93,17 @@ namespace graph_search_wholebody_contact_planner{
       diffSum += contactDiff.first;
       nearestIdxSum += contactDiff.second;
       count++;
+      bool found = false;
+      for (int j=0; j<contactCheckParam->robotLinkPriority.size() && !found; j++) {
+        for (int k=0; k<contactCheckParam->robotLinkPriority[j][k].size() && !found; k++) {
+          if ((!state.contacts[i].c1.isStatic && (state.contacts[i].c1.linkName.find(contactCheckParam->robotLinkPriority[j][k]) != std::string::npos)) ||
+              (!state.contacts[i].c2.isStatic && (state.contacts[i].c2.linkName.find(contactCheckParam->robotLinkPriority[j][k]) != std::string::npos))) {
+            prioritizedContactHeuristic += j * prioritizedWeight;
+            found = true;
+          }
+        }
+      }
+      if (!found) std::cerr << "error!! contact not exist in rootLinkPriority" << std::endl;
     }
     if (count == 0) node->heuristic() = contactCheckParam->guidePath.size() * 1e3; // ガイドパスに出てくる接触がない. objectを持つ接触だけ等. robotのSCFRがないので実行不可.
     else {
@@ -98,7 +111,7 @@ namespace graph_search_wholebody_contact_planner{
 
       std::cerr << "path size " << contactCheckParam->guidePath.size() << " nearestIdx : " << nearestIdx << std::endl;
       std::static_pointer_cast<ContactNode>(node)->level() = (unsigned int)nearestIdx;
-      node->heuristic() = (contactCheckParam->guidePath.size() - 1 - nearestIdx) * 1e1 + diffSum;
+      node->heuristic() = (contactCheckParam->guidePath.size() - 1 - nearestIdx) * 1e1 + diffSum + prioritizedContactHeuristic;
     }
   }
 

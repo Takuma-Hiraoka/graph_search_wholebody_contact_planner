@@ -53,6 +53,18 @@ namespace graph_search_wholebody_contact_planner{
       }
       if (!detach) {
         heuristic += nSatisfy;
+        for (int i=0; i<state.contacts.size(); i++) {
+          bool found = false;
+          for (int j=0; j<contactCheckParam->robotLinkPriority.size() && !found; j++) {
+            for (int k=0; k<contactCheckParam->robotLinkPriority[j][k].size() && !found; k++) {
+              if ((state.contacts[i].c1.linkName.find(contactCheckParam->robotLinkPriority[j][k]) != std::string::npos) ||
+                  (state.contacts[i].c2.linkName.find(contactCheckParam->robotLinkPriority[j][k]) != std::string::npos)) {
+                heuristic += (contactCheckParam->robotLinkPriority.size() - j) * contactWeight;
+                found = true;
+              }
+            }
+          }
+        }
         heuristic += state.contacts.size() * contactWeight;
         // 対象物体にはひとつは触れているように
         bool in_contact = false;

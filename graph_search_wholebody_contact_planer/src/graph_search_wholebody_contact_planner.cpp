@@ -58,6 +58,7 @@ namespace graph_search_wholebody_contact_planner{
     checkParam->contactStaticCandidates = this->contactStaticCandidates;
     checkParam->pikParam = this->pikParam;
     checkParam->gikParam = this->gikParam;
+    checkParam->robotLinkPriority = this->robotLinkPriority;
     checkParam->debugLevel = this->debugLevel();
     checkParam->addCandidateDistance = this->addCandidateDistance;
   }

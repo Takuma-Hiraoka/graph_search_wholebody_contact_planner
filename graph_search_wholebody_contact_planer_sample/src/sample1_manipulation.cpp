@@ -110,6 +110,7 @@ namespace graph_search_wholebody_contact_planner_sample{
     planner.pikParam.viewMilliseconds = -1;
     // planner.pikParam.viewer = viewer;
 
+    planner.robotLinkPriority = std::vector<std::vector<std::string> >{{"LEG_JOINT"},{"ARM_JOINT"}};
     planner.addCandidateDistance = 1.0;
     planner.threads() = 10;
     planner.debugLevel() = 0;

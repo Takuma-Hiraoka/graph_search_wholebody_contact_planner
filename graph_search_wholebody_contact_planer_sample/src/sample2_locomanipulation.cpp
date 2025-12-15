@@ -94,6 +94,7 @@ namespace graph_search_wholebody_contact_planner_sample{
     // locoPlanner.pikParam.viewMilliseconds = -1;
     // locoPlanner.pikParam.viewer = viewer;
 
+    locoPlanner.robotLinkPriority = std::vector<std::vector<std::string> >{{"LEG_JOINT"},{"ARM_JOINT"}};
     locoPlanner.goal = cube->rootLink()->T();
     locoPlanner.goalPrecision = goalPrecision * 1.1;
     locoPlanner.addCandidateDistance = 1.5;
@@ -153,6 +154,7 @@ namespace graph_search_wholebody_contact_planner_sample{
     manipPlanner.addCandidateDistance = 1.2;
     manipPlanner.gikParam.threads = locoPlanner.gikParam.threads;
     manipPlanner.debugLevel() = 0;
+    manipPlanner.robotLinkPriority = std::vector<std::vector<std::string> >{{"LEG_JOINT"},{"ARM_JOINT"}};
     manipPlanner.currentContactState = std::make_shared<graph_search_wholebody_contact_planner::ContactState>(gsGoPath.back());
     for (int i=0; i<manipPlanner.currentContactState->contacts.size(); i++) {
       if (manipPlanner.currentContactState->contacts[i].c1.bodyName == cube->name() && manipPlanner.currentContactState->contacts[i].c1.linkName == "cube") manipPlanner.currentContactState->contacts[i].c1.isStatic = false;
