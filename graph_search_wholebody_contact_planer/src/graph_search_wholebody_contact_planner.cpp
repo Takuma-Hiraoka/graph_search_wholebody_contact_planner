@@ -54,6 +54,10 @@ namespace graph_search_wholebody_contact_planner{
     for(int j=0;j<this->bodyContactConstraints.size();j++){
       checkParam->bodyContactConstraints[j] = this->bodyContactConstraints[j]->clone(modelMap);
     }
+    checkParam->reachableConstraints = std::vector<std::shared_ptr<ik_constraint2::IKConstraint> >(this->reachableConstraints.size());
+    for(int j=0;j<this->reachableConstraints.size();j++){
+      checkParam->reachableConstraints[j] = this->reachableConstraints[j]->clone(modelMap);
+    }
     checkParam->contactDynamicCandidates = this->contactDynamicCandidates;
     checkParam->contactStaticCandidates = this->contactStaticCandidates;
     checkParam->pikParam = this->pikParam;

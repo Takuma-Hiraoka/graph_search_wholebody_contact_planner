@@ -155,7 +155,11 @@ namespace graph_search_wholebody_contact_planner{
 
       std::vector<std::shared_ptr<ContactCandidate> > contactStaticCandidatesLimited;
       for (int j=0; j<contactCheckParam->contactStaticCandidates.size(); j++) {
-        if ((rootPos - contactCheckParam->contactStaticCandidates[j]->localPose.translation()).norm() > contactCheckParam->addCandidateDistance) continue;
+        cnoid::Isometry3 trans = cnoid::Isometry3::Identity();
+        for (int b=0; b<contactCheckParam->bodies.size(); b++) {
+          if ((contactCheckParam->bodies[b]->name() == contactCheckParam->contactStaticCandidates[j]->bodyName) && contactCheckParam->bodies[b]->joint(contactCheckParam->contactStaticCandidates[j]->linkName)) trans = contactCheckParam->bodies[b]->joint(contactCheckParam->contactStaticCandidates[j]->linkName)->T();
+        }
+        if ((rootPos - (trans * contactCheckParam->contactStaticCandidates[j]->localPose).translation()).norm() > contactCheckParam->addCandidateDistance) continue;
         contactStaticCandidatesLimited.push_back(contactCheckParam->contactStaticCandidates[j]);
       }
       std::vector<std::shared_ptr<ContactCandidate> > contactStaticCandidatesNear;
@@ -576,6 +580,7 @@ namespace graph_search_wholebody_contact_planner{
     planner.bodies = param.bodies;
     planner.variables = param.variables;
     planner.constraints = param.constraints;
+    planner.constraints.insert(planner.constraints.end(), param.searchRegionConstraints.begin(), param.searchRegionConstraints.end());
     planner.nominals = param.nominals;
     planner.currentContactState = std::make_shared<graph_search_wholebody_contact_planner::ContactState>();
     for (int i=0; i<param.currentContactPoints.size(); i++) {

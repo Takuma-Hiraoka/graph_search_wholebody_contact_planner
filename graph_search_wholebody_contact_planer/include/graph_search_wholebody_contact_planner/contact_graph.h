@@ -19,6 +19,7 @@ namespace graph_search_wholebody_contact_planner{
     std::vector<std::shared_ptr<ik_constraint2::IKConstraint> > rejections;
     std::vector<std::shared_ptr<ik_constraint2::IKConstraint> > nominals;
     std::vector<std::shared_ptr<ik_constraint2::IKConstraint> > bodyContactConstraints; // A側にlinkやcontact pointを設定しておくこと
+    std::vector<std::shared_ptr<ik_constraint2::IKConstraint> > reachableConstraints;
     std::shared_ptr<ContactState> currentContactState;
     std::vector<std::shared_ptr<ContactCandidate> > contactDynamicCandidates;
     std::vector<std::shared_ptr<ContactCandidate> > contactStaticCandidates; // staticCondidate同士の接触は起こりえない
@@ -64,6 +65,7 @@ namespace graph_search_wholebody_contact_planner{
       std::vector<std::shared_ptr<ik_constraint2::IKConstraint> > rejections;
       std::vector<std::shared_ptr<ik_constraint2::IKConstraint> > nominals;
       std::vector<std::shared_ptr<ik_constraint2::IKConstraint> > bodyContactConstraints;
+      std::vector<std::shared_ptr<ik_constraint2::IKConstraint> > reachableConstraints;
       std::vector<std::shared_ptr<ContactCandidate> > contactDynamicCandidates;
       std::vector<std::shared_ptr<ContactCandidate> > contactStaticCandidates;
       prioritized_inverse_kinematics_solver2::IKParam pikParam;

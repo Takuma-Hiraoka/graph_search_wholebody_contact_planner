@@ -206,7 +206,7 @@ namespace graph_search_wholebody_contact_planner{
 
       }
     }
-    // std::cerr << "heuristic " << heuristic << std::endl;
+    if (heuristic == 0) std::cerr << "heuristic " << heuristic << std::endl;
     node->heuristic() = heuristic;
   }
 
@@ -248,7 +248,11 @@ namespace graph_search_wholebody_contact_planner{
         if ((contactCheckParam->bodies[b]->name() == contactCheckParam->contactDynamicCandidates[i]->bodyName) && contactCheckParam->bodies[b]->joint(contactCheckParam->contactDynamicCandidates[i]->linkName)) rootPos = contactCheckParam->bodies[b]->rootLink()->p();
       }
       for (int j=0; j<contactCheckParam->contactStaticCandidates.size(); j++) {
-        if ((rootPos - contactCheckParam->contactStaticCandidates[j]->localPose.translation()).norm() > contactCheckParam->addCandidateDistance) continue;
+        cnoid::Isometry3 trans = cnoid::Isometry3::Identity();
+        for (int b=0; b<contactCheckParam->bodies.size(); b++) {
+          if ((contactCheckParam->bodies[b]->name() == contactCheckParam->contactStaticCandidates[j]->bodyName) && contactCheckParam->bodies[b]->joint(contactCheckParam->contactStaticCandidates[j]->linkName)) trans = contactCheckParam->bodies[b]->joint(contactCheckParam->contactStaticCandidates[j]->linkName)->T();
+        }
+        if ((rootPos - (trans * contactCheckParam->contactStaticCandidates[j]->localPose).translation()).norm() > contactCheckParam->addCandidateDistance) continue;
 
         std::shared_ptr<ContactNode> newNode = std::make_shared<ContactNode>();
         newNode->state() = extend_state;
@@ -280,8 +284,6 @@ namespace graph_search_wholebody_contact_planner{
     }
 
     for (int i=0; i<contactDynamicCandidatesBuf.size(); i++) {
-      // それぞれのルートリンク位置の距離がaddCandidateDistanceを超えるcontactDynamicCandidate同士を接触させることはしない
-      // 高速化のため. gikを使うまでもなく解けない
       cnoid::Vector3 rootPos1;
       for (int b=0; b<contactCheckParam->bodies.size(); b++) {
         if ((contactCheckParam->bodies[b]->name() == contactDynamicCandidatesBuf[i]->bodyName) && contactCheckParam->bodies[b]->joint(contactDynamicCandidatesBuf[i]->linkName)) rootPos1 = contactCheckParam->bodies[b]->rootLink()->p();
@@ -295,11 +297,15 @@ namespace graph_search_wholebody_contact_planner{
         if ((((contactDynamicCandidatesBuf[i]->bodyName == contactCheckParam->bodies[0]->name()) && !contactDynamicCandidatesBuf[j]->isStatic) ||
              ((contactDynamicCandidatesBuf[j]->bodyName == contactCheckParam->bodies[0]->name()) && !contactDynamicCandidatesBuf[i]->isStatic)) &&
             (numContactLink - numObjectContact <= 2)) continue;
-        cnoid::Vector3 rootPos2;
-        for (int b=0; b<contactCheckParam->bodies.size(); b++) {
-          if ((contactCheckParam->bodies[b]->name() == contactDynamicCandidatesBuf[j]->bodyName) && contactCheckParam->bodies[b]->joint(contactDynamicCandidatesBuf[j]->linkName)) rootPos2 = contactCheckParam->bodies[b]->rootLink()->p();
-        }
-        if ((rootPos1 - rootPos2).norm() > contactCheckParam->addCandidateDistance) continue;
+
+        // それぞれのルートリンク位置の距離がaddCandidateDistanceを超えるcontactDynamicCandidate同士を接触させることはしない
+        // 高速化のため. gikを使うまでもなく解けない
+        // なのだが、dynamicCandidate同士は既に十分近いという仮定でこのチェックは行わない
+        // cnoid::Vector3 rootPos2;
+        // for (int b=0; b<contactCheckParam->bodies.size(); b++) {
+        //   if ((contactCheckParam->bodies[b]->name() == contactDynamicCandidatesBuf[j]->bodyName) && contactCheckParam->bodies[b]->joint(contactDynamicCandidatesBuf[j]->linkName)) rootPos2 = contactCheckParam->bodies[b]->rootLink()->p();
+        // }
+        // if ((rootPos1 - rootPos2).norm() > contactCheckParam->addCandidateDistance) continue;
 
         // localPoseが違ったとしても既に接触しているリンク同士を更に接触させることはしない
         bool found = false;
@@ -331,7 +337,7 @@ namespace graph_search_wholebody_contact_planner{
     std::shared_ptr<const WholeBodyManipulationContactPlanner::ManipulationContactTransitionCheckParam> contactCheckParam = std::static_pointer_cast<const WholeBodyManipulationContactPlanner::ManipulationContactTransitionCheckParam>(checkParam);
     std::shared_ptr<std::vector<std::vector<double> > > tmpPath = std::make_shared<std::vector<std::vector<double> > >();
     std::vector<std::shared_ptr<ik_constraint2::IKConstraint> > constraints0; // 幾何干渉や重心制約.
-    std::vector<std::shared_ptr<ik_constraint2::IKConstraint> > constraints1; // 動かさない接触
+    std::vector<std::shared_ptr<ik_constraint2::IKConstraint> > constraints1; // 動かさない接触, 接触しないEE
     std::vector<std::shared_ptr<ik_constraint2::IKConstraint> > constraints2; // 動かす接触
     std::vector<std::shared_ptr<ik_constraint2::IKConstraint> > nominals;
 
@@ -372,6 +378,17 @@ namespace graph_search_wholebody_contact_planner{
         std::shared_ptr<ik_constraint2_scfr::ScfrConstraint> scfrConstraint = std::make_shared<ik_constraint2_scfr::ScfrConstraint>();
         scfrConstraint->A_robot() = contactCheckParam->bodies[b];
         scfrConstraints.push_back(scfrConstraint);
+      }
+    }
+
+    {
+      for (int i=0; i<contactCheckParam->reachableConstraints.size(); i++) {
+        bool skip = false;
+        std::shared_ptr<ik_constraint2::CollisionConstraint> constraint = std::static_pointer_cast<ik_constraint2::CollisionConstraint>(contactCheckParam->reachableConstraints[i]);
+        for (int j=0; j<contactCheckParam->preState.contacts.size() && !skip; j++) if ((contactCheckParam->preState.contacts[j].c1.bodyName == constraint->A_link()->body()->name()) && (contactCheckParam->preState.contacts[j].c1.linkName == constraint->A_link()->name()) ||
+                                                                                       ((contactCheckParam->preState.contacts[j].c2.bodyName == constraint->A_link()->body()->name()) && (contactCheckParam->preState.contacts[j].c2.linkName == constraint->A_link()->name()))) skip = true;
+        if (!skip && (((moveContact.c1.bodyName == constraint->A_link()->body()->name()) && (moveContact.c1.linkName == constraint->A_link()->name())) || ((moveContact.c2.bodyName == constraint->A_link()->body()->name()) && (moveContact.c2.linkName == constraint->A_link()->name())))) skip = true;
+        if (!skip) constraints1.push_back(contactCheckParam->reachableConstraints[i]);
       }
     }
 
