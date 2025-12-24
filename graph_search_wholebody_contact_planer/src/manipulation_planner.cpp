@@ -43,7 +43,94 @@ namespace graph_search_wholebody_contact_planner{
     if (contactCheckParam->targetContact.second) { // attach
       bool attach = false;
       for (int i=0; i<state.contacts.size(); i++) {
-        if (state.contacts[i] == contactCheckParam->targetContact.first) attach = true;
+        // 対象とattachできて、staticなcontactだけでtargetContactの物体のSCFRが存在するときに良く
+        if (state.contacts[i] == contactCheckParam->targetContact.first) {
+          Eigen::SparseMatrix<double,Eigen::RowMajor> C(11,6);
+          C.insert(0,2) = 1.0;
+          C.insert(1,0) = 1.0; C.insert(1,2) = 0.5;
+          C.insert(2,0) = -1.0; C.insert(2,2) = 0.5;
+          C.insert(3,1) = 1.0; C.insert(3,2) = 0.5;
+          C.insert(4,1) = -1.0; C.insert(4,2) = 0.5;
+          C.insert(5,2) = 0.05; C.insert(5,3) = 1.0;
+          C.insert(6,2) = 0.05; C.insert(6,3) = -1.0;
+          C.insert(7,2) = 0.05; C.insert(7,4) = 1.0;
+          C.insert(8,2) = 0.05; C.insert(8,4) = -1.0;
+          C.insert(9,2) = 0.1; C.insert(9,5) = 1.0;
+          C.insert(10,2) = 0.1; C.insert(10,5) = -1.0;
+          cnoid::VectorX dl = Eigen::VectorXd::Zero(11);
+          cnoid::VectorX du = 1e10 * Eigen::VectorXd::Ones(11);
+          du[0] = 2000.0;
+          // state.contacts[i].c1
+          if (state.contacts[i].c1.isStatic) {
+            bool solved = false;
+            for (int b=0; b<contactCheckParam->bodies.size(); b++) {
+              if (contactCheckParam->bodies[b]->name() == state.contacts[i].c2.bodyName) {
+                if (!contactCheckParam->bodies[b]->link(state.contacts[i].c2.linkName)) {
+                  std::cerr << "[WholeBodyManipulationContactPlanner] contactCheckParam->bodies[b] does not have state.contacts[i].c2.linkName !!" << std::endl;
+                  continue;
+                }
+                std::vector<cnoid::Isometry3> poses;
+                std::vector<Eigen::SparseMatrix<double,Eigen::RowMajor> > As;
+                std::vector<cnoid::VectorX> bs;
+                std::vector<Eigen::SparseMatrix<double,Eigen::RowMajor> > Cs;
+                std::vector<cnoid::VectorX> dls;
+                std::vector<cnoid::VectorX> dus;
+                poses.push_back(contactCheckParam->bodies[b]->link(state.contacts[i].c2.linkName)->T() * state.contacts[i].c2.localPose);
+                As.emplace_back(0,6);
+                bs.emplace_back(0);
+                Cs.push_back(C);
+                dls.push_back(dl);
+                dus.push_back(du);
+                scfr_solver::SCFRParam scfrParam;
+                solved = ik_constraint2_keep_collision_scfr::checkSCFRExistance(poses,
+                                                                                As,
+                                                                                bs,
+                                                                                Cs,
+                                                                                dls,
+                                                                                dus,
+                                                                                contactCheckParam->bodies[b]->mass(),
+                                                                                scfrParam
+                                                                                );
+              }
+            }
+            if (solved) attach = true;
+          }
+          // state.contacts[i].c2
+          if (state.contacts[i].c2.isStatic) {
+            bool solved = false;
+            for (int b=0; b<contactCheckParam->bodies.size(); b++) {
+              if (contactCheckParam->bodies[b]->name() == state.contacts[i].c1.bodyName) {
+                if (!contactCheckParam->bodies[b]->link(state.contacts[i].c1.linkName)) {
+                  std::cerr << "[WholeBodyManipulationContactPlanner] contactCheckParam->bodies[b] does not have state.contacts[i].c1.linkName !!" << std::endl;
+                  continue;
+                }
+                std::vector<cnoid::Isometry3> poses;
+                std::vector<Eigen::SparseMatrix<double,Eigen::RowMajor> > As;
+                std::vector<cnoid::VectorX> bs;
+                std::vector<Eigen::SparseMatrix<double,Eigen::RowMajor> > Cs;
+                std::vector<cnoid::VectorX> dls;
+                std::vector<cnoid::VectorX> dus;
+                poses.push_back(contactCheckParam->bodies[b]->link(state.contacts[i].c1.linkName)->T() * state.contacts[i].c1.localPose);
+                As.emplace_back(0,6);
+                bs.emplace_back(0);
+                Cs.push_back(C);
+                dls.push_back(dl);
+                dus.push_back(du);
+                scfr_solver::SCFRParam scfrParam;
+                solved = ik_constraint2_keep_collision_scfr::checkSCFRExistance(poses,
+                                                                                As,
+                                                                                bs,
+                                                                                Cs,
+                                                                                dls,
+                                                                                dus,
+                                                                                contactCheckParam->bodies[b]->mass(),
+                                                                                scfrParam
+                                                                                );
+              }
+            }
+            if (solved) attach = true;
+          }
+        }
       }
       if (!attach) heuristic += nSatisfy;
     } else { // detach
