@@ -16,6 +16,10 @@ namespace graph_search_wholebody_contact_planner{
     if (this->currentContactState->transition.size() == 0) this->currentContactState->transition.push_back(this->currentContactState->frame);
     current_node->state() = *(this->currentContactState);
     this->graph().push_back(current_node);
+    this->graph_states.reserve(std::numeric_limits<int>::max());
+    for (int i=0;i<this->graph().size();i++) {
+      this->graph_states.insert(toKey(std::static_pointer_cast<ContactNode>(this->graph()[i])->state()));
+    }
 
     return this->search();
   }
@@ -89,13 +93,14 @@ namespace graph_search_wholebody_contact_planner{
 
   void WholeBodyContactPlanner::addNodes2Graph(std::vector<std::shared_ptr<graph_search::Node> >& nodes) {
     // 再訪しない
-    for (int i=0;i<this->graph().size();i++) {
-      for(int j=0;j<nodes.size();j++) {
-        if (std::static_pointer_cast<ContactNode>(this->graph()[i])->state() == std::static_pointer_cast<ContactNode>(nodes[j])->state()) {
-          nodes.erase(nodes.begin()+j);
-          break;
-        }
-      }
+    nodes.erase(std::remove_if(nodes.begin(), nodes.end(),
+                               [&](const std::shared_ptr<graph_search::Node>& n) {
+                                 return graph_states.count(toKey(std::static_pointer_cast<ContactNode>(n)->state())) > 0;
+                               }),
+                nodes.end());
+
+    for (int i=0;i<nodes.size();i++) {
+      graph_states.insert(toKey(std::static_pointer_cast<ContactNode>(nodes[i])->state()));
     }
     graph_search::Planner::addNodes2Graph(nodes);
   }
