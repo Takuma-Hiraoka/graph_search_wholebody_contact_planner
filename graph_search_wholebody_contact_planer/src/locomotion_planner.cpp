@@ -314,7 +314,7 @@ namespace graph_search_wholebody_contact_planner{
               scfrConstraints[j]->links().push_back(nullptr);
               cnoid::Isometry3 pose = contactCheckParam->preState.contacts[i].c2.localPose;
               for (int b=0; b < contactCheckParam->bodies.size(); b++) {
-                if ((contactCheckParam->bodies[b]->name() != contactCheckParam->preState.contacts[i].c2.bodyName) && contactCheckParam->bodies[b]->link(contactCheckParam->preState.contacts[i].c2.linkName)) pose = contactCheckParam->bodies[b]->link(contactCheckParam->preState.contacts[i].c2.linkName)->T() * contactCheckParam->preState.contacts[i].c2.localPose;
+                if ((contactCheckParam->bodies[b]->name() == contactCheckParam->preState.contacts[i].c2.bodyName) && contactCheckParam->bodies[b]->link(contactCheckParam->preState.contacts[i].c2.linkName)) pose = contactCheckParam->bodies[b]->link(contactCheckParam->preState.contacts[i].c2.linkName)->T() * contactCheckParam->preState.contacts[i].c2.localPose;
               }
               pose.linear() *= cnoid::rotFromRpy(0.0, M_PI, M_PI/2).transpose();
               scfrConstraints[j]->poses().push_back(pose);
@@ -333,7 +333,7 @@ namespace graph_search_wholebody_contact_planner{
               scfrConstraints[j]->links().push_back(nullptr);
               cnoid::Isometry3 pose = contactCheckParam->preState.contacts[i].c1.localPose;
               for (int b=0; b < contactCheckParam->bodies.size(); b++) {
-                if ((contactCheckParam->bodies[b]->name() != contactCheckParam->preState.contacts[i].c1.bodyName) && contactCheckParam->bodies[b]->link(contactCheckParam->preState.contacts[i].c1.linkName)) pose = contactCheckParam->bodies[b]->link(contactCheckParam->preState.contacts[i].c1.linkName)->T() * contactCheckParam->preState.contacts[i].c1.localPose;
+                if ((contactCheckParam->bodies[b]->name() == contactCheckParam->preState.contacts[i].c1.bodyName) && contactCheckParam->bodies[b]->link(contactCheckParam->preState.contacts[i].c1.linkName)) pose = contactCheckParam->bodies[b]->link(contactCheckParam->preState.contacts[i].c1.linkName)->T() * contactCheckParam->preState.contacts[i].c1.localPose;
               }
               pose.linear() *= cnoid::rotFromRpy(0.0, M_PI, M_PI/2).transpose();
               scfrConstraints[j]->poses().push_back(pose);
@@ -372,8 +372,7 @@ namespace graph_search_wholebody_contact_planner{
 
     if ((ikState==IKState::DETACH_FIXED) ||
         (ikState==IKState::ATTACH_PRE)) {
-      if (moveContactConstraint->B_link()) moveContactConstraint->B_localpos().translation() += moveContactConstraint->B_link()->R() * moveContactConstraint->B_localpos().linear() * cnoid::Vector3(0,0,0.04);
-      else moveContactConstraint->B_localpos().translation() += moveContactConstraint->B_localpos().linear() * cnoid::Vector3(0,0,0.04);
+      moveContactConstraint->B_localpos().translation() += moveContactConstraint->B_localpos().linear() * cnoid::Vector3(0,0,0.04);
     }
     moveContactConstraint->eval_link() = moveContactConstraint->B_link();
     moveContactConstraint->eval_localR() = moveContactConstraint->B_localpos().linear();
@@ -473,11 +472,9 @@ namespace graph_search_wholebody_contact_planner{
           moveContactConstraint->B_localpos().linear() = moveContactConstraint->B_localpos().linear() * cnoid::rotFromRpy(0.0, M_PI, M_PI/2); // 戻す
           if ((ikState==IKState::DETACH_FIXED) ||
               (ikState==IKState::ATTACH_PRE)) {
-            if (moveContactConstraint->A_link()) moveContactConstraint->A_localpos().translation() += moveContactConstraint->A_link()->R() * moveContactConstraint->A_localpos().linear() * cnoid::Vector3(0,0,0.04);
-            else moveContactConstraint->A_localpos().translation() += moveContactConstraint->A_localpos().linear() * cnoid::Vector3(0,0,0.04);
+            moveContactConstraint->A_localpos().translation() += moveContactConstraint->A_localpos().linear() * cnoid::Vector3(0,0,0.04);
             // 変えた分を戻す
-            if (moveContactConstraint->B_link()) moveContactConstraint->B_localpos().translation() -= moveContactConstraint->B_link()->R() * moveContactConstraint->B_localpos().linear() * cnoid::Vector3(0,0,0.04);
-            else moveContactConstraint->B_localpos().translation() -= moveContactConstraint->B_localpos().linear() * cnoid::Vector3(0,0,0.04);
+            moveContactConstraint->B_localpos().translation() -= moveContactConstraint->B_localpos().linear() * cnoid::Vector3(0,0,0.04);
           }
           moveContactConstraint->eval_link() = moveContactConstraint->A_link();
           moveContactConstraint->eval_localR() = moveContactConstraint->A_localpos().linear();
