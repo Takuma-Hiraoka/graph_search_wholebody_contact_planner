@@ -28,6 +28,7 @@ namespace graph_search_wholebody_contact_planner{
     std::shared_ptr<moveit_extensions::InterpolatedPropagationDistanceField> field;
     std::vector<std::vector<std::string> > robotLinkPriority;
     double addCandidateDistance = 2.0; // contactDynamicCandidateのルートリンクからこの距離を超えるものはgikを使うまでもなく解けないものとする
+    std::unordered_set<ContactStateKey, ContactStateKeyHash> graph_states;
 
     WholeBodyContactPlanner() {
       gikParam.maxTranslation = 2.0;
