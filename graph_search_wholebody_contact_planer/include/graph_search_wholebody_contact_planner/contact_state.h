@@ -50,13 +50,17 @@ namespace graph_search_wholebody_contact_planner{
     std::size_t id2;
 
     double x1, y1, z1;  // c1.localPose.translation
+    double qw1, qx1, qy1, qz1; // c1.localPose.rotation
     double x2, y2, z2;  // c2.localPose.translation
+    double qw2, qx2, qy2, qz2; // c2.localPose.rotation
 
     bool operator==(const ContactKey& o) const {
       return id1 == o.id1 &&
         id2 == o.id2 &&
         x1 == o.x1 && y1 == o.y1 && z1 == o.z1 &&
-        x2 == o.x2 && y2 == o.y2 && z2 == o.z2;
+        qw1 == o.qw1 && qx1 == o.qx1 && qy1 == o.qy1 && qz1 == o.qz1 &&
+        x2 == o.x2 && y2 == o.y2 && z2 == o.z2 &&
+        qw2 == o.qw2 && qx2 == o.qx2 && qy2 == o.qy2 && qz2 == o.qz2;
     }
   };
 
@@ -81,9 +85,17 @@ namespace graph_search_wholebody_contact_planner{
         mix(h, std::hash<double>()(key.contacts[i].x1));
         mix(h, std::hash<double>()(key.contacts[i].y1));
         mix(h, std::hash<double>()(key.contacts[i].z1));
+        mix(h, std::hash<double>()(key.contacts[i].qw1));
+        mix(h, std::hash<double>()(key.contacts[i].qx1));
+        mix(h, std::hash<double>()(key.contacts[i].qy1));
+        mix(h, std::hash<double>()(key.contacts[i].qz1));
         mix(h, std::hash<double>()(key.contacts[i].x2));
         mix(h, std::hash<double>()(key.contacts[i].y2));
         mix(h, std::hash<double>()(key.contacts[i].z2));
+        mix(h, std::hash<double>()(key.contacts[i].qw2));
+        mix(h, std::hash<double>()(key.contacts[i].qx2));
+        mix(h, std::hash<double>()(key.contacts[i].qy2));
+        mix(h, std::hash<double>()(key.contacts[i].qz2));
       }
       return h;
     }
@@ -106,19 +118,27 @@ namespace graph_search_wholebody_contact_planner{
         ck.id2 = h2;
 
         cnoid::Vector3 t1 = state.contacts[i].c1.localPose.translation();
+        cnoid::Quaternion q1(state.contacts[i].c1.localPose.linear());
         cnoid::Vector3 t2 = state.contacts[i].c2.localPose.translation();
+        cnoid::Quaternion q2(state.contacts[i].c2.localPose.linear());
 
         ck.x1 = t1[0]; ck.y1 = t1[1]; ck.z1 = t1[2];
+        ck.qw1 = q1.w(); ck.qx1 = q1.x(); ck.qy1 = q1.y(); ck.qz1 = q1.z();
         ck.x2 = t2[0]; ck.y2 = t2[1]; ck.z2 = t2[2];
+        ck.qw2 = q2.w(); ck.qx2 = q2.x(); ck.qy2 = q2.y(); ck.qz2 = q2.z();
       } else {
         ck.id1 = h2;
         ck.id2 = h1;
 
         cnoid::Vector3 t1 = state.contacts[i].c2.localPose.translation();
+        cnoid::Quaternion q1(state.contacts[i].c2.localPose.linear());
         cnoid::Vector3 t2 = state.contacts[i].c1.localPose.translation();
+        cnoid::Quaternion q2(state.contacts[i].c1.localPose.linear());
 
         ck.x1 = t1[0]; ck.y1 = t1[1]; ck.z1 = t1[2];
+        ck.qw1 = q1.w(); ck.qx1 = q1.x(); ck.qy1 = q1.y(); ck.qz1 = q1.z();
         ck.x2 = t2[0]; ck.y2 = t2[1]; ck.z2 = t2[2];
+        ck.qw2 = q2.w(); ck.qx2 = q2.x(); ck.qy2 = q2.y(); ck.qz2 = q2.z();
       }
 
       key.contacts.push_back(ck);
@@ -127,8 +147,8 @@ namespace graph_search_wholebody_contact_planner{
     // ContactState の contacts 順不同を吸収
     std::sort(key.contacts.begin(), key.contacts.end(),
               [](ContactKey& a, ContactKey& b){
-                return std::tie(a.id1, a.id2, a.x1, a.y1, a.z1, a.x2, a.y2, a.z2)
-                  < std::tie(b.id1, b.id2, b.x1, b.y1, b.z1, b.x2, b.y2, b.z2);
+                return std::tie(a.id1, a.id2, a.x1, a.y1, a.z1, a.qw1, a.qx1, a.qy1, a.qz1, a.x2, a.y2, a.z2, a.qw2, a.qx2, a.qy2, a.qz2)
+                  < std::tie(b.id1, b.id2, b.x1, b.y1, b.z1, b.qw1, b.qx1, b.qy1, b.qz1, b.x2, b.y2, b.z2, b.qw2, b.qx2, b.qy2, b.qz2);
               });
 
     return key;

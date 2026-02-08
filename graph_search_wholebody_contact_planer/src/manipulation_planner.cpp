@@ -42,6 +42,7 @@ namespace graph_search_wholebody_contact_planner{
     double scfrNSatisfy = 1e2;
     if (contactCheckParam->targetContact.second) { // attach
       bool attach = false;
+      heuristic += state.contacts.size() * contactWeight;
       for (int i=0; i<state.contacts.size(); i++) {
         // 対象とattachできて、staticなcontactだけでtargetContactの物体のSCFRが存在するときに良く
         if (state.contacts[i] == contactCheckParam->targetContact.first) {
@@ -140,33 +141,33 @@ namespace graph_search_wholebody_contact_planner{
       }
       if (!detach) {
         heuristic += nSatisfy;
-        for (int i=0; i<state.contacts.size(); i++) {
-          bool found = false;
-          for (int j=0; j<contactCheckParam->robotLinkPriority.size() && !found; j++) {
-            for (int k=0; k<contactCheckParam->robotLinkPriority[j][k].size() && !found; k++) {
-              if ((state.contacts[i].c1.linkName.find(contactCheckParam->robotLinkPriority[j][k]) != std::string::npos) ||
-                  (state.contacts[i].c2.linkName.find(contactCheckParam->robotLinkPriority[j][k]) != std::string::npos)) {
-                heuristic += (contactCheckParam->robotLinkPriority.size() - j) * contactWeight;
-                found = true;
-              }
-            }
-          }
-        }
+        // for (int i=0; i<state.contacts.size(); i++) {
+        //   bool found = false;
+        //   for (int j=0; j<contactCheckParam->robotLinkPriority.size() && !found; j++) {
+        //     for (int k=0; k<contactCheckParam->robotLinkPriority[j].size() && !found; k++) {
+        //       if ((state.contacts[i].c1.linkName.find(contactCheckParam->robotLinkPriority[j][k]) != std::string::npos) ||
+        //           (state.contacts[i].c2.linkName.find(contactCheckParam->robotLinkPriority[j][k]) != std::string::npos)) {
+        //         heuristic += (contactCheckParam->robotLinkPriority.size() - j) * contactWeight;
+        //         found = true;
+        //       }
+        //     }
+        //   }
+        // }
         heuristic += state.contacts.size() * contactWeight;
         // 対象物体にはひとつは触れているように
         bool in_contact = false;
         for (int i=0; i<state.contacts.size(); i++) {
           if (state.contacts[i] == contactCheckParam->targetContact.first) continue;
           if (!contactCheckParam->targetContact.first.c1.isStatic &&
-              ((state.contacts[i].c1.bodyName == contactCheckParam->targetContact.first.c1.bodyName) ||
-               (state.contacts[i].c2.bodyName == contactCheckParam->targetContact.first.c1.bodyName))
+              (((state.contacts[i].c2.linkName.find(contactCheckParam->robotLinkPriority.back()[0]) != std::string::npos) && (state.contacts[i].c1.bodyName == contactCheckParam->targetContact.first.c1.bodyName)) ||
+               ((state.contacts[i].c1.linkName.find(contactCheckParam->robotLinkPriority.back()[0]) != std::string::npos) && (state.contacts[i].c2.bodyName == contactCheckParam->targetContact.first.c1.bodyName)))
               ) in_contact = true;
           else if (!contactCheckParam->targetContact.first.c2.isStatic &&
-              ((state.contacts[i].c1.bodyName == contactCheckParam->targetContact.first.c2.bodyName) ||
-               (state.contacts[i].c2.bodyName == contactCheckParam->targetContact.first.c2.bodyName))
+                   (((state.contacts[i].c2.linkName.find(contactCheckParam->robotLinkPriority.back()[0]) != std::string::npos) && (state.contacts[i].c1.bodyName == contactCheckParam->targetContact.first.c2.bodyName)) ||
+                    ((state.contacts[i].c1.linkName.find(contactCheckParam->robotLinkPriority.back()[0]) != std::string::npos) && (state.contacts[i].c2.bodyName == contactCheckParam->targetContact.first.c2.bodyName)))
               ) in_contact = true;
         }
-        if (in_contact) heuristic -= contactWeight;
+        if (!in_contact) heuristic += scfrNSatisfy/2;
         // detachが可能になる（SCFRが存在するようになる）ときに良く
         // targetContactに関係するbodyのみ
         // targetContactに関係するbodyは既にfixed bodyとkinematics tree上で連結しているという仮定
@@ -206,22 +207,26 @@ namespace graph_search_wholebody_contact_planner{
               for (int c=0; c<checkContacts.size(); c++) {
                 if (checkContacts[c].c1.bodyName == targetContact.first.c1.bodyName) {
                   if (contactCheckParam->bodies[b]->link(checkContacts[c].c1.linkName)) {
-                    poses.push_back(contactCheckParam->bodies[b]->link(checkContacts[c].c1.linkName)->T() * checkContacts[c].c1.localPose);
-                    As.emplace_back(0,6);
-                    bs.emplace_back(0);
-                    Cs.push_back(C);
-                    dls.push_back(dl);
-                    dus.push_back(du);
+                    if (checkContacts[c].c2.linkName.find(contactCheckParam->robotLinkPriority.back()[0]) != std::string::npos) {
+                      poses.push_back(contactCheckParam->bodies[b]->link(checkContacts[c].c1.linkName)->T() * checkContacts[c].c1.localPose);
+                      As.emplace_back(0,6);
+                      bs.emplace_back(0);
+                      Cs.push_back(C);
+                      dls.push_back(dl);
+                      dus.push_back(du);
+                    }
                   } else std::cerr << "[WholeBodyManipulationContactPlanner] contactCheckParam->bodies[b] does not have checkContacts[c].c1.linkName !!" << std::endl;
                 } else if (checkContacts[c].c2.bodyName == targetContact.first.c1.bodyName) {
                   if (contactCheckParam->bodies[b]->link(checkContacts[c].c2.linkName)) {
-                    poses.push_back(contactCheckParam->bodies[b]->link(checkContacts[c].c2.linkName)->T() * checkContacts[c].c2.localPose);
-                    As.emplace_back(0,6);
-                    bs.emplace_back(0);
-                    Cs.push_back(C);
-                    dls.push_back(dl);
-                    dus.push_back(du);
-                  } else std::cerr << "[WholeBodyManipulationContactPlanner] contactCheckParam->bodies[b] does not have checkContacts[c].c2.linkName !!" << std::endl;
+                    if (checkContacts[c].c1.linkName.find(contactCheckParam->robotLinkPriority.back()[0]) != std::string::npos) {
+                      poses.push_back(contactCheckParam->bodies[b]->link(checkContacts[c].c2.linkName)->T() * checkContacts[c].c2.localPose);
+                      As.emplace_back(0,6);
+                      bs.emplace_back(0);
+                      Cs.push_back(C);
+                      dls.push_back(dl);
+                      dus.push_back(du);
+                    }
+                  } else std::cerr << "[WholeBodyManipulationContactPlanner] " << contactCheckParam->bodies[b]->name() << " does not have " << checkContacts[c].c2.linkName << " !!" << std::endl;
                 }
               }
               scfr_solver::SCFRParam scfrParam;
@@ -257,22 +262,26 @@ namespace graph_search_wholebody_contact_planner{
               for (int c=0; c<checkContacts.size(); c++) {
                 if (checkContacts[c].c1.bodyName == targetContact.first.c2.bodyName) {
                   if (contactCheckParam->bodies[b]->link(checkContacts[c].c1.linkName)) {
-                    poses.push_back(contactCheckParam->bodies[b]->link(checkContacts[c].c1.linkName)->T() * checkContacts[c].c1.localPose);
-                    As.emplace_back(0,6);
-                    bs.emplace_back(0);
-                    Cs.push_back(C);
-                    dls.push_back(dl);
-                    dus.push_back(du);
+                    if (checkContacts[c].c2.linkName.find(contactCheckParam->robotLinkPriority.back()[0]) != std::string::npos) {
+                      poses.push_back(contactCheckParam->bodies[b]->link(checkContacts[c].c1.linkName)->T() * checkContacts[c].c1.localPose);
+                      As.emplace_back(0,6);
+                      bs.emplace_back(0);
+                      Cs.push_back(C);
+                      dls.push_back(dl);
+                      dus.push_back(du);
+                    }
                   } else std::cerr << "[WholeBodyManipulationContactPlanner] contactCheckParam->bodies[b] does not have checkContacts[c].c1.linkName !!" << std::endl;
                 } else if (checkContacts[c].c2.bodyName == targetContact.first.c2.bodyName) {
-                  if (contactCheckParam->bodies[b]->link(checkContacts[c].c2.linkName)) {
-                    poses.push_back(contactCheckParam->bodies[b]->link(checkContacts[c].c2.linkName)->T() * checkContacts[c].c2.localPose);
-                    As.emplace_back(0,6);
-                    bs.emplace_back(0);
-                    Cs.push_back(C);
-                    dls.push_back(dl);
-                    dus.push_back(du);
-                  } else std::cerr << "[WholeBodyManipulationContactPlanner] contactCheckParam->bodies[b] does not have checkContacts[c].c2.linkName !!" << std::endl;
+                  if (contactCheckParam->bodies[b]->link(checkContacts[c].c2.linkName)){
+                    if (checkContacts[c].c1.linkName.find(contactCheckParam->robotLinkPriority.back()[0]) != std::string::npos) {
+                      poses.push_back(contactCheckParam->bodies[b]->link(checkContacts[c].c2.linkName)->T() * checkContacts[c].c2.localPose);
+                      As.emplace_back(0,6);
+                      bs.emplace_back(0);
+                      Cs.push_back(C);
+                      dls.push_back(dl);
+                      dus.push_back(du);
+                    }
+                  } else std::cerr << "[WholeBodyManipulationContactPlanner] " << contactCheckParam->bodies[b]->name() << " does not have " << checkContacts[c].c2.linkName << " !!" << std::endl;
                 }
               }
               scfr_solver::SCFRParam scfrParam;
@@ -308,6 +317,8 @@ namespace graph_search_wholebody_contact_planner{
     // 接触の減少
     if (extend_state.contacts.size() >= 2) {
       for (int i=0; i<extend_state.contacts.size();i++) {
+        if ((extend_state.contacts[i].c1.linkName.find(contactCheckParam->robotLinkPriority.back()[0]) != std::string::npos) ||
+            (extend_state.contacts[i].c2.linkName.find(contactCheckParam->robotLinkPriority.back()[0]) != std::string::npos)) continue;
         std::shared_ptr<ContactNode> newNode = std::make_shared<ContactNode>();
         newNode->state() = extend_state;
         newNode->state().contacts.erase(newNode->state().contacts.begin()+i);
@@ -326,6 +337,14 @@ namespace graph_search_wholebody_contact_planner{
           break;
         }
       }
+      bool in_contact = false;
+      for (int j=0; j<extend_state.contacts.size() && !in_contact; j++) {
+        if (((contactCheckParam->contactDynamicCandidates[i]->bodyName == extend_state.contacts[j].c1.bodyName) && (contactCheckParam->contactDynamicCandidates[i]->linkName == extend_state.contacts[j].c1.linkName) && (contactCheckParam->contactDynamicCandidates[i]->localPose.translation() == extend_state.contacts[j].c1.localPose.translation())) ||
+            ((contactCheckParam->contactDynamicCandidates[i]->bodyName == extend_state.contacts[j].c2.bodyName) && (contactCheckParam->contactDynamicCandidates[i]->linkName == extend_state.contacts[j].c2.linkName) && (contactCheckParam->contactDynamicCandidates[i]->localPose.translation() == extend_state.contacts[j].c2.localPose.translation()))) in_contact = true;
+      }
+      if (in_contact) skip = true;
+      // detachならrobotLinkPriorityの初めの要素だけ
+      if (!contactCheckParam->targetContact.second && contactCheckParam->contactDynamicCandidates[i]->linkName.find(contactCheckParam->robotLinkPriority[0][0]) == std::string::npos) skip = true;
       if (skip) continue;
 
       // ルートリンク位置からaddCandidateDistanceを超える距離のstaticCandidateと接触させることはしない
@@ -341,6 +360,11 @@ namespace graph_search_wholebody_contact_planner{
         }
         if ((rootPos - (trans * contactCheckParam->contactStaticCandidates[j]->localPose).translation()).norm() > contactCheckParam->addCandidateDistance) continue;
 
+        // attachのとき、targetContactに関係するdynamicContactはtargetContact先としか接触させない
+        if (contactCheckParam->targetContact.second) {
+          if ((contactCheckParam->targetContact.first.c1.bodyName == contactCheckParam->contactDynamicCandidates[i]->bodyName) && (contactCheckParam->targetContact.first.c1.linkName == contactCheckParam->contactDynamicCandidates[i]->linkName) && contactCheckParam->targetContact.first.c2.bodyName != contactCheckParam->contactStaticCandidates[j]->bodyName) continue;
+          if ((contactCheckParam->targetContact.first.c2.bodyName == contactCheckParam->contactDynamicCandidates[i]->bodyName) && (contactCheckParam->targetContact.first.c2.linkName == contactCheckParam->contactDynamicCandidates[i]->linkName) && contactCheckParam->targetContact.first.c1.bodyName != contactCheckParam->contactStaticCandidates[j]->bodyName) continue;
+        }
         std::shared_ptr<ContactNode> newNode = std::make_shared<ContactNode>();
         newNode->state() = extend_state;
         Contact c = Contact(*(contactCheckParam->contactDynamicCandidates[i]), *(contactCheckParam->contactStaticCandidates[j]));
@@ -499,10 +523,10 @@ namespace graph_search_wholebody_contact_planner{
           }
         }
         constraint->B_localpos() = contactCheckParam->preState.contacts[i].c2.localPose;
-        constraint->B_localpos().linear() = constraint->B_localpos().linear() * cnoid::rotFromRpy(0.0, M_PI, M_PI/2).transpose(); // scfrを作る関係上localposのZはrobotの内側を向いている. PositionConstraintで一致させるためにZの向きを揃える.
+        constraint->B_localpos().linear() = constraint->B_localpos().linear() * cnoid::rotFromRpy(0.0, M_PI, M_PI/2); // scfrを作る関係上localposのZはrobotの内側を向いている. PositionConstraintで一致させるためにZの向きを揃える.
         constraint->eval_link() = constraint->B_link();
         constraint->eval_localR() = constraint->B_localpos().linear();
-        constraint->weight() << 1.0, 1.0, 1.0, 1.0, 1.0, 1.0;
+        constraint->weight() << 0.5, 0.5, 0.5, 1.0, 1.0, 1.0;
         constraints1.push_back(constraint);
         Eigen::SparseMatrix<double,Eigen::RowMajor> C(11,6);
         C.insert(0,2) = 1.0;
@@ -537,7 +561,7 @@ namespace graph_search_wholebody_contact_planner{
               for (int b=0; b < contactCheckParam->bodies.size(); b++) {
                 if ((contactCheckParam->bodies[b]->name() == contactCheckParam->preState.contacts[i].c2.bodyName) && contactCheckParam->bodies[b]->link(contactCheckParam->preState.contacts[i].c2.linkName)) pose = contactCheckParam->bodies[b]->link(contactCheckParam->preState.contacts[i].c2.linkName)->T() * contactCheckParam->preState.contacts[i].c2.localPose;
               }
-              pose.linear() *= cnoid::rotFromRpy(0.0, M_PI, M_PI/2).transpose();
+              pose.linear() *= cnoid::rotFromRpy(0.0, M_PI, M_PI/2);
               scfrConstraints[j]->poses().push_back(pose);
             } else {
               scfrConstraints[j]->links().push_back(scfrConstraints[j]->A_robot()->joint(contactCheckParam->preState.contacts[i].c1.linkName));
@@ -556,7 +580,7 @@ namespace graph_search_wholebody_contact_planner{
               for (int b=0; b < contactCheckParam->bodies.size(); b++) {
                 if ((contactCheckParam->bodies[b]->name() == contactCheckParam->preState.contacts[i].c1.bodyName) && contactCheckParam->bodies[b]->link(contactCheckParam->preState.contacts[i].c1.linkName)) pose = contactCheckParam->bodies[b]->link(contactCheckParam->preState.contacts[i].c1.linkName)->T() * contactCheckParam->preState.contacts[i].c1.localPose;
               }
-              pose.linear() *= cnoid::rotFromRpy(0.0, M_PI, M_PI/2).transpose();
+              pose.linear() *= cnoid::rotFromRpy(0.0, M_PI, M_PI/2);
               scfrConstraints[j]->poses().push_back(pose);
             } else {
               scfrConstraints[j]->links().push_back(scfrConstraints[j]->A_robot()->joint(contactCheckParam->preState.contacts[i].c2.linkName));
@@ -597,24 +621,24 @@ namespace graph_search_wholebody_contact_planner{
       if (bodyConstraint->A_link() == moveContactConstraint->B_link()) use_B_robot = true;
     }
     if (use_A_robot || !use_B_robot) {
-      moveContactConstraint->B_localpos().linear() = moveContactConstraint->B_localpos().linear() * cnoid::rotFromRpy(0.0, M_PI, M_PI/2).transpose(); // scfrを作る関係上localposのZはrobotの内側を向いている. PositionConstraintで一致させるために回転だけ逆にする.
+      moveContactConstraint->B_localpos().linear() = moveContactConstraint->B_localpos().linear() * cnoid::rotFromRpy(0.0, M_PI, M_PI/2); // scfrを作る関係上localposのZはrobotの内側を向いている. PositionConstraintで一致させるために回転だけ逆にする.
       if ((ikState==IKState::DETACH_FIXED) ||
           (ikState==IKState::ATTACH_PRE)) {
-        moveContactConstraint->B_localpos().translation() += moveContactConstraint->B_localpos().linear() * cnoid::Vector3(0,0,0.1);
+        moveContactConstraint->B_localpos().translation() += moveContactConstraint->B_localpos().linear() * cnoid::Vector3(0,0,0.04);
       }
       moveContactConstraint->eval_link() = moveContactConstraint->B_link();
       moveContactConstraint->eval_localR() = moveContactConstraint->B_localpos().linear();
     }else if (use_B_robot) {
-      moveContactConstraint->A_localpos().linear() = moveContactConstraint->A_localpos().linear() * cnoid::rotFromRpy(0.0, M_PI, M_PI/2).transpose(); // scfrを作る関係上localposのZはrobotの内側を向いている. PositionConstraintで一致させるために回転だけ逆にする.
+      moveContactConstraint->A_localpos().linear() = moveContactConstraint->A_localpos().linear() * cnoid::rotFromRpy(0.0, M_PI, M_PI/2); // scfrを作る関係上localposのZはrobotの内側を向いている. PositionConstraintで一致させるために回転だけ逆にする.
       if ((ikState==IKState::DETACH_FIXED) ||
           (ikState==IKState::ATTACH_PRE)) {
-        moveContactConstraint->A_localpos().translation() += moveContactConstraint->A_localpos().linear() * cnoid::Vector3(0,0,0.1);
+        moveContactConstraint->A_localpos().translation() += moveContactConstraint->A_localpos().linear() * cnoid::Vector3(0,0,0.04);
       }
       moveContactConstraint->eval_link() = moveContactConstraint->A_link();
       moveContactConstraint->eval_localR() = moveContactConstraint->A_localpos().linear();
     }
 
-    moveContactConstraint->weight() << 1.0, 1.0, 1.0, 1.0, 1.0, 0.0;
+    moveContactConstraint->weight() << 1.0, 1.0, 1.0, 1.0, 1.0, 1.0;
     constraints2.push_back(moveContactConstraint);
 
     for (int i=0;i<scfrConstraints.size();i++) {
@@ -633,6 +657,25 @@ namespace graph_search_wholebody_contact_planner{
                                                                    contactCheckParam->pikParam,
                                                                    tmpPath
                                                                    );
+    if (contactCheckParam->debugLevel >= 2) {
+      for ( int i=0; i<constraints0.size(); i++ ) {
+        std::cerr << "constraints0: "<< constraints0[i]->isSatisfied() << std::endl;
+      }
+      for ( int i=0; i<constraints1.size(); i++ ) {
+        std::cerr << "constraints1: "<< constraints1[i]->isSatisfied() << std::endl;
+        if (!constraints1[i]->isSatisfied()) {
+          constraints1[i]->debugLevel() = 2;
+          constraints1[i]->updateBounds();
+          constraints1[i]->debugLevel() = 0;
+        }
+      }
+      for ( int i=0; i<constraints2.size(); i++ ) {
+        // constraints2[i]->debugLevel() = 2;
+        // constraints2[i]->updateBounds();
+        std::cerr << "constraints2: "<< constraints2[i]->isSatisfied() << std::endl;
+        // constraints2[i]->debugLevel() = 0;
+      }
+    }
     if(!solved) {
       std::vector<std::vector<std::shared_ptr<ik_constraint2::IKConstraint> > > gikConstraints{constraints0, constraints1};
       global_inverse_kinematics_solver::GIKParam gikParam = contactCheckParam->gikParam;
@@ -741,45 +784,47 @@ namespace graph_search_wholebody_contact_planner{
                                                                      );
     }
 
-    // for ( int i=0; i<constraints0.size(); i++ ) {
-    //   std::cerr << "constraints0: "<< constraints0[i]->isSatisfied() << std::endl;
-    // }
-    // for ( int i=0; i<constraints1.size(); i++ ) {
-    //   std::cerr << "constraints1: "<< constraints1[i]->isSatisfied() << std::endl;
-    // }
-    // for ( int i=0; i<constraints2.size(); i++ ) {
-    //   constraints2[i]->debugLevel() = 2;
-    //   constraints2[i]->updateBounds();
-    //   std::cerr << "constraints2: "<< constraints2[i]->isSatisfied() << std::endl;
-    //   constraints2[i]->debugLevel() = 0;
-    // }
+    if (contactCheckParam->debugLevel >= 2) {
+      for ( int i=0; i<constraints0.size(); i++ ) {
+        std::cerr << "constraints0: "<< constraints0[i]->isSatisfied() << std::endl;
+      }
+      for ( int i=0; i<constraints1.size(); i++ ) {
+        std::cerr << "constraints1: "<< constraints1[i]->isSatisfied() << std::endl;
+      }
+      for ( int i=0; i<constraints2.size(); i++ ) {
+        // constraints2[i]->debugLevel() = 2;
+        // constraints2[i]->updateBounds();
+        std::cerr << "constraints2: "<< constraints2[i]->isSatisfied() << std::endl;
+        // constraints2[i]->debugLevel() = 0;
+      }
+    }
     // for ( int i=0; i<nominals.size(); i++ ) {
     //   std::cerr << "nominals: "<< nominals[i]->isSatisfied() << std::endl;
     // }
 
     if (solved) {
       postState.transition.insert(postState.transition.end(), (*tmpPath).begin(), (*tmpPath).end());
-      if (use_A_robot) {
-        moveContact.c1.localPose = moveContactConstraint->A_localpos();
-        cnoid::Matrix3d B_rot = cnoid::Matrix3d::Identity();
-        if (moveContactConstraint->B_link()) B_rot = moveContactConstraint->B_link()->R();
-        cnoid::Matrix3d A_rot = moveContactConstraint->A_link()->R() * moveContactConstraint->A_localpos().linear();
-        moveContact.c2.localPose.linear() = (B_rot.transpose() * A_rot) * cnoid::rotFromRpy(0.0, M_PI, M_PI/2);
-      } else if (use_B_robot) {
-        moveContact.c2.localPose = moveContactConstraint->B_localpos();
-        cnoid::Matrix3d A_rot = cnoid::Matrix3d::Identity();
-        if (moveContactConstraint->A_link()) A_rot = moveContactConstraint->A_link()->R();
-        cnoid::Matrix3d B_rot = moveContactConstraint->B_link()->R() * moveContactConstraint->B_localpos().linear();
-        moveContact.c1.localPose.linear() = (A_rot.transpose() * B_rot) * cnoid::rotFromRpy(0.0, M_PI, M_PI/2);
-      } else {
-        moveContact.c1.localPose.linear() = moveContactConstraint->A_localpos().linear();
-        cnoid::Matrix3d B_rot = cnoid::Matrix3d::Identity();
-        if (moveContactConstraint->B_link()) B_rot = moveContactConstraint->B_link()->R();
-        cnoid::Matrix3d A_rot;
-        if (moveContactConstraint->A_link()) A_rot = moveContactConstraint->A_link()->R() * moveContactConstraint->A_localpos().linear();
-        else A_rot = moveContactConstraint->A_localpos().linear();
-        moveContact.c2.localPose.linear() = (B_rot.transpose() * A_rot) * cnoid::rotFromRpy(0.0, M_PI, M_PI/2);
-      }
+      // if (use_A_robot) {
+      //   moveContact.c1.localPose = moveContactConstraint->A_localpos();
+      //   cnoid::Matrix3d B_rot = cnoid::Matrix3d::Identity();
+      //   if (moveContactConstraint->B_link()) B_rot = moveContactConstraint->B_link()->R();
+      //   cnoid::Matrix3d A_rot = moveContactConstraint->A_link()->R() * moveContactConstraint->A_localpos().linear();
+      //   moveContact.c2.localPose.linear() = (B_rot.transpose() * A_rot) * cnoid::rotFromRpy(0.0, M_PI, M_PI/2);
+      // } else if (use_B_robot) {
+      //   moveContact.c2.localPose = moveContactConstraint->B_localpos();
+      //   cnoid::Matrix3d A_rot = cnoid::Matrix3d::Identity();
+      //   if (moveContactConstraint->A_link()) A_rot = moveContactConstraint->A_link()->R();
+      //   cnoid::Matrix3d B_rot = moveContactConstraint->B_link()->R() * moveContactConstraint->B_localpos().linear();
+      //   moveContact.c1.localPose.linear() = (A_rot.transpose() * B_rot) * cnoid::rotFromRpy(0.0, M_PI, M_PI/2);
+      // } else {
+      //   moveContact.c1.localPose.linear() = moveContactConstraint->A_localpos().linear();
+      //   cnoid::Matrix3d B_rot = cnoid::Matrix3d::Identity();
+      //   if (moveContactConstraint->B_link()) B_rot = moveContactConstraint->B_link()->R();
+      //   cnoid::Matrix3d A_rot;
+      //   if (moveContactConstraint->A_link()) A_rot = moveContactConstraint->A_link()->R() * moveContactConstraint->A_localpos().linear();
+      //   else A_rot = moveContactConstraint->A_localpos().linear();
+      //   moveContact.c2.localPose.linear() = (B_rot.transpose() * A_rot) * cnoid::rotFromRpy(0.0, M_PI, M_PI/2);
+      // }
     }
 
     return solved;
